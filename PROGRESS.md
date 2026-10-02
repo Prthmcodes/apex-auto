@@ -4,7 +4,7 @@ Phase-by-phase checklist for the Apex Auto demo site. See CLAUDE.md → "Apex Au
 
 - [x] **Phase 0 — Setup**: Next.js + TypeScript project scaffolded; 3D and animation libraries installed (three, @react-three/fiber, @react-three/drei, @react-three/postprocessing, gsap, lenis).
 - [x] **Phase 1 — Skeleton**: Fixed full-screen canvas with a placeholder cube; camera driven along a straight path by scroll progress via GSAP ScrollTrigger + Lenis; 600vh scroll track.
-- [ ] **Phase 2 — World**: Build the real procedural scene (garage, car, lighting) in code, no imported models.
+- [x] **Phase 2 — World**: Static procedural world — dark ground with a glowing teal grid, a boxy garage with an amber-lit open roller door, a teal neon "APEX AUTO" sign (Rajdhani Bold, SIL OFL), dusk fog/lighting, and a code-built hologram car inside. Camera path retargeted from outside the garage toward the door (choreography still comes in Phase 3).
 - [ ] **Phase 3 — Fly-through**: Scroll-driven "under the bonnet" camera sequence.
   - [ ] 3A — Arrive & inspect
   - [ ] 3B — Wheels & engine
