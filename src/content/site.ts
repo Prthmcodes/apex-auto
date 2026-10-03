@@ -72,6 +72,49 @@ export const siteContent = {
     points: ["Oil level", "Coolant", "Battery", "Brake fluid"] as string[],
   },
 
+  // DEMO COPY — the short story shown when a visitor taps one of the six
+  // floating tools. These are illustrative placeholders written to show
+  // the feature working, NOT claims about a real garage: no prices, no
+  // qualifications, no opening hours. Replace every one of them with the
+  // client's own words before this goes in front of their customers.
+  // `id` must match the tool's `name` in scene/FloatingTools.tsx.
+  toolStories: [
+    {
+      id: "spanner",
+      title: "General servicing",
+      body: "DEMO COPY — routine servicing, from a basic oil-and-filter change to a full inspection. Describe here what a standard service covers.",
+    },
+    {
+      id: "oil bottle",
+      title: "Oil & filter changes",
+      body: "DEMO COPY — fresh oil and a new filter, matched to what the engine actually asks for. Mention the grades stocked and how long it takes.",
+    },
+    {
+      id: "brake disc and caliper",
+      title: "Brakes",
+      body: "DEMO COPY — pads, discs and fluid checked and replaced when they need it. Say how brake wear is assessed and what gets reported back.",
+    },
+    {
+      id: "tyre pressure gauge",
+      title: "Tyres & pressures",
+      body: "DEMO COPY — tread depth, pressures and wear patterns checked on every visit. List the tyre work offered and anything done free of charge.",
+    },
+    {
+      id: "spark plug",
+      title: "Diagnostics",
+      body: "DEMO COPY — a fault code read and explained in plain English, not jargon. Describe the diagnostic equipment and what the report includes.",
+    },
+    {
+      id: "torque wrench",
+      title: "About the shop",
+      body: "DEMO COPY — a family-run garage in East London, giving honest quotes with no surprises. Replace this with the real story of the business.",
+    },
+  ] as { id: string; title: string; body: string }[],
+
+  // The one-off nudge telling a first-time visitor the tools can be
+  // tapped. Fades on its own after a few seconds.
+  toolHint: "Tap a tool to learn more",
+
   // The real-world body colour of the car model, applied with clearcoat in
   // CarModel.tsx. Change this one value to re-colour the car.
   carColor: "#0b0b0d",

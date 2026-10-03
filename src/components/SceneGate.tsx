@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import ScrollRig from "./ScrollRig";
 import StageOverlay from "./StageOverlay";
 import ConversionOverlay from "./ConversionOverlay";
+import ToolStoryOverlay from "./ToolStoryOverlay";
 import LoadingScreen from "./LoadingScreen";
 import SceneErrorBoundary from "./SceneErrorBoundary";
 import FallbackSection from "./FallbackSection";
@@ -54,6 +55,7 @@ export default function SceneGate() {
       <Experience onReady={() => setReady(true)} onProgress={setLoadProgress} />
       <StageOverlay />
       <ConversionOverlay />
+      <ToolStoryOverlay />
       <ScrollRig />
       <LoadingScreen ready={ready} progress={loadProgress} />
     </SceneErrorBoundary>

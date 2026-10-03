@@ -27,6 +27,19 @@ const MATERIALS = {
   rimLight: "#c9dcff",
   workshopLight: "#ffc286",
   contactShadow: "#000000",
+
+  // Workshop dressing: the tool chest and the props around the bay. All
+  // kept a little duller than the car's paint so the car stays the
+  // brightest, sharpest thing on screen.
+  chestRed: "#8e2b24",
+  chestCharcoal: "#2b2e33",
+  benchTop: "#6b5742",
+  pegboard: "#4a4036",
+  drumBlue: "#2f4a5c",
+  drumRed: "#7a2f28",
+  safetyYellow: "#c9a227",
+  wallGrime: "#2a2b28",
+  lampShade: "#43464c",
 };
 
 const TEAL = {

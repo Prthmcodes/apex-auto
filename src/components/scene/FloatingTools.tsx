@@ -1,20 +1,27 @@
 "use client";
 
-import { useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useCallback, useRef } from "react";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import scrollState from "@/lib/scrollState";
 import { useReducedMotion } from "@/lib/useReducedMotion";
+import { peek, setHover, toggleStory } from "@/lib/toolStory";
 import { theme } from "./theme";
 import { bandOpacity, hardBand } from "./stageFade";
 import { ENGINE_RANGE, DIAGNOSTICS_RANGE } from "./carStages";
+import { RISE_START, chestSlot, toolRise } from "./toolReveal";
 
 type Vec3 = [number, number, number];
 
-// The tools are on show from the start of "engine" to the end of
-// "diagnostics", easing in and out at either end.
-const SHOW_RANGE: [number, number] = [ENGINE_RANGE[0], DIAGNOSTICS_RANGE[1]];
+// The tools are on show from the moment the first one lifts out of the
+// tool chest (well before "engine") to the end of "diagnostics". Coming
+// in is handled per tool by toolRise, so they appear one after another;
+// this range only governs how they leave at the end.
+const SHOW_RANGE: [number, number] = [RISE_START, DIAGNOSTICS_RANGE[1]];
+// Once a tool is out of its drawer it flies over to its "engine" spot,
+// arriving as the engine stage begins.
+const FLY_END = ENGINE_RANGE[0];
 // Between these two scroll points the tools glide from their "engine"
 // spots (beside the car) to their "diagnostics" spots (above the roof),
 // while the camera itself moves between those two shots.
@@ -139,6 +146,49 @@ const material = {
   face: new THREE.MeshStandardMaterial({ color: theme.gaugeFace, roughness: 0.5 }),
 };
 
+/**
+ * A soft round glow, painted once as a small radial gradient.
+ *
+ * A plain additive sphere was tried first and looked wrong: additive
+ * blending makes every pixel of it equally bright, so it read as a solid
+ * ball of colour swallowing the tool rather than a glow behind it. A
+ * gradient that falls away to nothing at its edge is what actually reads
+ * as light.
+ */
+function makeGlowTexture() {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const gradient = ctx.createRadialGradient(
+    size / 2, size / 2, 0,
+    size / 2, size / 2, size / 2
+  );
+  gradient.addColorStop(0, "rgba(255,255,255,0.85)");
+  gradient.addColorStop(0.35, "rgba(255,255,255,0.28)");
+  gradient.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+// Built lazily, so this module can still be imported where there's no
+// document (it only ever renders in the browser, but imports are cheap to
+// get wrong).
+let glowTexture: THREE.Texture | null = null;
+function getGlowTexture() {
+  if (!glowTexture) glowTexture = makeGlowTexture();
+  return glowTexture;
+}
+
+// A sprite always faces the camera, so the glow reads the same from every
+// angle without any per-frame work.
+// Deliberately generous hit target: a comfortable tap on a phone, where
+// the tools are small on screen.
+const hitGeometry = new THREE.SphereGeometry(0.2, 12, 8);
+
 type PartSpec = {
   geometry: THREE.BufferGeometry;
   material: THREE.Material;
@@ -244,21 +294,64 @@ const TOOLS: ToolSpec[] = [
   },
 ];
 
+// Shared scratch objects for the per-frame maths, so nothing is allocated
+// inside useFrame.
+const scratchTarget = new THREE.Vector3();
+const scratchSlot = new THREE.Vector3();
+
 function FloatingTool({ tool, index }: { tool: ToolSpec; index: number }) {
   const groupRef = useRef<THREE.Group>(null!);
+  const glowRef = useRef<THREE.Sprite>(null!);
+  const glowMaterial = useRef<THREE.SpriteMaterial>(null!);
   const reducedMotion = useReducedMotion();
   const phase = index * 1.7;
+  const slot = chestSlot(index);
 
-  useFrame(({ clock, size }) => {
+  // Smoothed hover amount, so the glow and the size ease rather than snap.
+  const hover = useRef(0);
+
+  const onOver = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      event.stopPropagation();
+      setHover(tool.name);
+      document.body.style.cursor = "pointer";
+    },
+    [tool.name]
+  );
+
+  const onOut = useCallback(() => {
+    setHover(null);
+    document.body.style.cursor = "";
+  }, []);
+
+  const onClick = useCallback(
+    (event: ThreeEvent<MouseEvent>) => {
+      // Keeps the click from also counting as a click on the backdrop,
+      // which would immediately close the card we're opening.
+      event.stopPropagation();
+      toggleStory(tool.name);
+    },
+    [tool.name]
+  );
+
+  useFrame(({ clock, size }, delta) => {
     const progress = scrollState.progress;
     const reduced = reducedMotion.current;
     const group = groupRef.current;
 
-    const amount = reduced
+    // How far this tool is out of its drawer, and how far through its
+    // flight to the car it is.
+    const rise = toolRise(progress, index, reduced);
+    const leaving = reduced
       ? hardBand(progress, SHOW_RANGE)
-      : bandOpacity(progress, SHOW_RANGE, 0.06);
+      : bandOpacity(progress, [SHOW_RANGE[0] - 1, SHOW_RANGE[1]], 0.06);
+
+    const amount = Math.min(rise, leaving);
     group.visible = amount > 0.001;
-    if (!group.visible) return;
+    if (!group.visible) {
+      if (hover.current !== 0) hover.current = 0;
+      return;
+    }
 
     // Ease in by growing from nothing, rather than fading (see-through
     // metal looks wrong).
@@ -272,7 +365,19 @@ function FloatingTool({ tool, index }: { tool: ToolSpec; index: number }) {
     // Slightly smaller in the wide diagnostics shot, where the strip above
     // the roof is narrow.
     const fit = tall ? 1 : THREE.MathUtils.lerp(1, 0.8, move);
-    group.scale.setScalar(tool.scale * eased * fit);
+
+    // Hover: a touch bigger, with a glow behind it. Eased by time rather
+    // than snapped, and skipped entirely under reduced motion.
+    const state = peek();
+    const wanted = state.hoverId === tool.name || state.openId === tool.name ? 1 : 0;
+    hover.current = reduced
+      ? wanted
+      : THREE.MathUtils.damp(hover.current, wanted, 12, delta);
+    const hovered = hover.current;
+
+    group.scale.setScalar(tool.scale * eased * fit * (1 + hovered * 0.16));
+    if (glowMaterial.current) glowMaterial.current.opacity = hovered * 0.5;
+    if (glowRef.current) glowRef.current.visible = hovered > 0.01;
 
     // A slow, gentle hover and turn; switched off for reduced motion.
     const t = reduced ? 0 : clock.elapsedTime;
@@ -280,11 +385,23 @@ function FloatingTool({ tool, index }: { tool: ToolSpec; index: number }) {
     // While gliding between the two stages' spots, arc up and over the
     // roof rather than cutting through the car.
     const arc = Math.sin(move * Math.PI) * 0.9;
-    group.position.set(
+    scratchTarget.set(
       THREE.MathUtils.lerp(ex, dx, move),
-      THREE.MathUtils.lerp(ey, dy, move) + arc + bob - (1 - eased) * 0.15,
+      THREE.MathUtils.lerp(ey, dy, move) + arc + bob,
       THREE.MathUtils.lerp(ez, dz, move)
     );
+
+    // Before the engine stage the tool is still travelling from its drawer
+    // to its hovering spot; `fly` is 0 at the chest and 1 once it's there.
+    const fly = reduced
+      ? 1
+      : THREE.MathUtils.smoothstep(progress, RISE_START + index * 0.022, FLY_END);
+    if (fly < 1) {
+      scratchSlot.set(slot[0], slot[1] + rise * 0.35, slot[2]);
+      scratchTarget.lerpVectors(scratchSlot, scratchTarget, THREE.MathUtils.smoothstep(fly, 0, 1));
+    }
+    group.position.copy(scratchTarget);
+
     group.rotation.set(
       tool.tilt[0] + Math.sin(t * 0.3 + phase) * 0.15,
       tool.tilt[1] + t * 0.25,
@@ -293,7 +410,29 @@ function FloatingTool({ tool, index }: { tool: ToolSpec; index: number }) {
   });
 
   return (
-    <group ref={groupRef} visible={false}>
+    <group
+      ref={groupRef}
+      visible={false}
+      onPointerOver={onOver}
+      onPointerOut={onOut}
+      onClick={onClick}
+    >
+      {/* A soft halo behind the tool on hover. Hidden (so not drawn)
+          whenever the tool isn't being pointed at; sprites aren't raycast
+          against here because the hit target below does that job. */}
+      <sprite ref={glowRef} visible={false} scale={0.62} raycast={() => null}>
+        <spriteMaterial
+          ref={glowMaterial}
+          map={getGlowTexture()}
+          color={theme.primary}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          depthTest={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </sprite>
       {tool.parts.map((part, i) => (
         <mesh
           key={i}
@@ -303,6 +442,9 @@ function FloatingTool({ tool, index }: { tool: ToolSpec; index: number }) {
           rotation={part.rotation}
         />
       ))}
+      {/* An invisible ball covering the whole tool, so fiddly shapes like
+          the spark plug are still easy to hit with a finger. */}
+      <mesh geometry={hitGeometry} visible={false} />
     </group>
   );
 }
