@@ -76,6 +76,22 @@ export const siteContent = {
   // CarModel.tsx. Change this one value to re-colour the car.
   carColor: "#0b0b0d",
 
+  // Credit for the 3D car model, shown as a small line on the home page's
+  // final screen. Its licence (CC BY 4.0) requires a visible credit naming
+  // the title, author, source and licence, and saying it was modified. See
+  // CREDITS.md. If you swap car.glb for a different model, update this.
+  carModelCredit: {
+    prefix: "3D car model",
+    title: "Range Rover Sport 2018",
+    titleUrl:
+      "https://sketchfab.com/3d-models/range-rover-sport-2018-d1fe581b3baf4af89275e9aa9a1392e2",
+    author: "diw3d",
+    authorUrl: "https://sketchfab.com/diwdiw",
+    license: "CC BY 4.0",
+    licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+    changes: "compressed and re-lit for this site",
+  },
+
   // The /book page's services list. Names are fixed (given directly, not
   // invented); descriptions are placeholders pending real copy.
   services: [

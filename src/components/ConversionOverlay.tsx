@@ -10,16 +10,19 @@ import { fadeOpacity } from "./scene/stageFade";
 
 const TOP_BAR_VISIBLE_FROM = siteContent.stages[1].range[0]; // "inspect" stage start
 const FINAL_CTA_RANGE = siteContent.stages[5].range; // "done" stage
+const credit = siteContent.carModelCredit;
 
 /**
  * Two scroll-driven HTML pieces, both outside the canvas per the project
  * rules: a slim top bar (name + a small Book link) that appears from stage
  * 2 onward and stays, and the final "Book a service" / "Call us" buttons
- * that fade in during the last stage.
+ * that fade in during the last stage, with the car model's licence credit
+ * underneath.
  */
 export default function ConversionOverlay() {
   const topBarRef = useRef<HTMLDivElement>(null);
   const finalCtaRef = useRef<HTMLDivElement>(null);
+  const creditRef = useRef<HTMLParagraphElement>(null);
   const reducedMotion = useReducedMotion();
 
   useEffect(() => {
@@ -37,6 +40,13 @@ export default function ConversionOverlay() {
         finalCtaRef.current.style.opacity = String(
           fadeOpacity(progress, FINAL_CTA_RANGE, reducedMotion.current)
         );
+      }
+
+      if (creditRef.current) {
+        const opacity = fadeOpacity(progress, FINAL_CTA_RANGE, reducedMotion.current);
+        creditRef.current.style.opacity = String(opacity * 0.7);
+        // Only clickable while it's actually visible.
+        creditRef.current.style.pointerEvents = opacity > 0.5 ? "auto" : "none";
       }
 
       frame = requestAnimationFrame(tick);
@@ -92,6 +102,26 @@ export default function ConversionOverlay() {
           </a>
         </div>
       </div>
+
+      {/* Licence credit for the 3D car model (CC BY 4.0 requires one). */}
+      <p
+        ref={creditRef}
+        className="pointer-events-none fixed inset-x-0 bottom-2 z-20 px-16 text-center text-[10px] leading-snug text-white/80 opacity-0"
+      >
+        {credit.prefix}:{" "}
+        <a href={credit.titleUrl} className="underline underline-offset-2" target="_blank" rel="noopener noreferrer">
+          “{credit.title}”
+        </a>{" "}
+        by{" "}
+        <a href={credit.authorUrl} className="underline underline-offset-2" target="_blank" rel="noopener noreferrer">
+          {credit.author}
+        </a>
+        ,{" "}
+        <a href={credit.licenseUrl} className="underline underline-offset-2" target="_blank" rel="noopener noreferrer">
+          {credit.license}
+        </a>{" "}
+        ({credit.changes})
+      </p>
     </>
   );
 }
