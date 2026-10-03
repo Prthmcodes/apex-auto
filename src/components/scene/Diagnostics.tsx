@@ -35,7 +35,7 @@ function ScanPlane() {
         <planeGeometry args={[2.2, 1.6]} />
         <meshBasicMaterial
           ref={materialRef}
-          color={theme.teal}
+          color={theme.primary}
           transparent
           opacity={0}
           side={THREE.DoubleSide}
@@ -79,9 +79,9 @@ function ReadoutChip({
         className="whitespace-nowrap rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
         style={{
           opacity: 0,
-          color: theme.teal,
+          color: theme.primary,
           backgroundColor: "rgba(6, 9, 18, 0.7)",
-          border: `1px solid ${theme.teal}66`,
+          border: `1px solid ${theme.primary}66`,
         }}
       >
         {text}

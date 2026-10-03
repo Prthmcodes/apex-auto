@@ -1,6 +1,7 @@
 "use client";
 
 import { theme } from "./scene/theme";
+import { siteContent } from "@/content/site";
 
 /**
  * Fades out once the 3D scene has rendered its first frame. There's no
@@ -18,15 +19,15 @@ export default function LoadingScreen({ ready }: { ready: boolean }) {
     >
       <p
         className="text-sm font-semibold uppercase tracking-[0.5em]"
-        style={{ color: theme.teal }}
+        style={{ color: theme.primary }}
       >
-        Apex Auto
+        {siteContent.business.name}
       </p>
       <div className="mt-4 h-0.5 w-40 overflow-hidden rounded-full bg-white/10">
         <div
           className="h-full rounded-full transition-[width] duration-500 ease-out"
           style={{
-            backgroundColor: theme.teal,
+            backgroundColor: theme.primary,
             width: ready ? "100%" : "65%",
           }}
         />

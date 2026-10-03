@@ -38,10 +38,10 @@ export default function StageOverlay() {
         if (dot) {
           const isActive = i === active;
           dot.style.backgroundColor = isActive
-            ? theme.teal
+            ? theme.primary
             : "rgba(255, 255, 255, 0.3)";
           dot.style.boxShadow = isActive
-            ? `0 0 10px 2px ${theme.teal}99`
+            ? `0 0 10px 2px ${theme.primary}99`
             : "none";
           dot.style.color = isActive ? theme.background : "rgba(255,255,255,0.7)";
           dot.style.transform = isActive ? "scale(1.15)" : "scale(1)";
@@ -71,7 +71,7 @@ export default function StageOverlay() {
             >
               <p
                 className="text-xs font-semibold uppercase tracking-[0.3em]"
-                style={{ color: theme.teal }}
+                style={{ color: theme.primary }}
               >
                 {stage.title}
               </p>

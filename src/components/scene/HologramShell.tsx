@@ -65,8 +65,8 @@ export default function HologramShell({
 
   const uniforms = useMemo(
     () => ({
-      uGlowColor: { value: new THREE.Color(theme.teal) },
-      uSolidColor: { value: new THREE.Color("#05070d") },
+      uGlowColor: { value: new THREE.Color(theme.primary) },
+      uSolidColor: { value: new THREE.Color(theme.carSolid) },
       uSolidify: { value: 0 },
     }),
     []

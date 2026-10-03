@@ -27,7 +27,7 @@ function MarkerDot({
       <sphereGeometry args={[0.06, 12, 12]} />
       <meshBasicMaterial
         ref={materialRef}
-        color={theme.teal}
+        color={theme.primary}
         transparent
         opacity={0}
         toneMapped={false}

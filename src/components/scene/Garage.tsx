@@ -62,8 +62,8 @@ export default function Garage() {
       <mesh position={[0, door.height - 0.1, frontZ + 0.4]}>
         <boxGeometry args={[door.width - 0.3, 0.1, 0.1]} />
         <meshStandardMaterial
-          color={theme.amber}
-          emissive={theme.amber}
+          color={theme.accent}
+          emissive={theme.accent}
           emissiveIntensity={2.5}
           toneMapped={false}
         />
@@ -72,7 +72,7 @@ export default function Garage() {
       {/* amber light spilling out of the garage onto the forecourt */}
       <pointLight
         position={[0, door.height - 0.6, frontZ + 1.5]}
-        color={theme.amber}
+        color={theme.accent}
         intensity={6}
         distance={13}
         decay={2}

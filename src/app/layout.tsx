@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import JsonLd from "@/components/JsonLd";
 import { SITE_URL } from "@/lib/siteUrl";
+import { siteContent } from "@/content/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,8 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "Apex Auto — East London",
-  description: "Scroll-driven 3D fly-through demo for Apex Auto garage.",
+  title: `${siteContent.business.name} — ${siteContent.business.area}`,
+  description: `Scroll-driven 3D fly-through demo for ${siteContent.business.name} garage.`,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

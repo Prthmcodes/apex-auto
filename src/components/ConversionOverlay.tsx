@@ -62,7 +62,7 @@ export default function ConversionOverlay() {
         <Link
           href={siteContent.cta.bookNowHref}
           className="rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-95"
-          style={{ backgroundColor: theme.teal, color: theme.background }}
+          style={{ backgroundColor: theme.primary, color: theme.background }}
         >
           {siteContent.cta.topBarBookLabel}
         </Link>
@@ -79,14 +79,14 @@ export default function ConversionOverlay() {
           <Link
             href={siteContent.cta.bookNowHref}
             className="flex min-h-[52px] flex-1 items-center justify-center rounded-full px-6 text-base font-semibold uppercase tracking-wide transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-95"
-            style={{ backgroundColor: theme.teal, color: theme.background }}
+            style={{ backgroundColor: theme.primary, color: theme.background }}
           >
             {siteContent.cta.bookNowLabel}
           </Link>
           <a
             href={siteContent.cta.callNowHref}
             className="flex min-h-[52px] flex-1 items-center justify-center rounded-full border-2 px-6 text-base font-semibold uppercase tracking-wide transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-95"
-            style={{ borderColor: theme.amber, color: theme.amber }}
+            style={{ borderColor: theme.accent, color: theme.accent }}
           >
             {siteContent.cta.callNowLabel}
           </a>

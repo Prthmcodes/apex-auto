@@ -16,10 +16,10 @@ export default function Ground() {
         args={[layout.ground.size, layout.ground.size]}
         cellSize={1}
         cellThickness={0.6}
-        cellColor={theme.teal}
+        cellColor={theme.primary}
         sectionSize={5}
         sectionThickness={1.2}
-        sectionColor={theme.teal}
+        sectionColor={theme.primary}
         fadeDistance={45}
         fadeStrength={1.5}
         infiniteGrid

@@ -18,7 +18,7 @@ export default function Sign() {
       anchorY="middle"
     >
       {siteContent.business.name.toUpperCase()}
-      <meshBasicMaterial color={theme.teal} toneMapped={false} />
+      <meshBasicMaterial color={theme.primary} toneMapped={false} />
     </Text>
   );
 }

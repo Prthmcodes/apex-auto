@@ -30,7 +30,7 @@ export default function BookPage() {
         <a
           href={siteContent.cta.callNowHref}
           className="rounded-full border-2 px-4 py-2 text-xs font-semibold uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          style={{ borderColor: theme.amber, color: theme.amber }}
+          style={{ borderColor: theme.accent, color: theme.accent }}
         >
           {siteContent.cta.callNowLabel}
         </a>
@@ -41,7 +41,7 @@ export default function BookPage() {
         <section className="flex flex-col gap-3">
           <p
             className="text-xs font-semibold uppercase tracking-[0.4em]"
-            style={{ color: theme.teal }}
+            style={{ color: theme.primary }}
           >
             {siteContent.business.area}
           </p>
@@ -66,7 +66,7 @@ export default function BookPage() {
                 <p className="mt-1 text-sm text-white/65">{service.description}</p>
                 <p
                   className="mt-3 text-sm font-semibold"
-                  style={{ color: theme.amber }}
+                  style={{ color: theme.accent }}
                 >
                   {siteContent.pricingNote}
                 </p>

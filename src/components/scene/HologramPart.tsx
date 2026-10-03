@@ -29,9 +29,9 @@ export function GlowEdges({
 }: GlowEdgesProps) {
   const edges = useMemo(() => new THREE.EdgesGeometry(geometry, 20), [geometry]);
   const lineRef = useRef<THREE.LineBasicMaterial>(null!);
-  const normalColor = useMemo(() => new THREE.Color(theme.teal), []);
+  const normalColor = useMemo(() => new THREE.Color(theme.primary), []);
   const brightColor = useMemo(
-    () => new THREE.Color(theme.teal).lerp(new THREE.Color("#ffffff"), 0.6),
+    () => new THREE.Color(theme.primary).lerp(new THREE.Color("#ffffff"), 0.6),
     []
   );
   const dynamic = Boolean(fadeRange || dimRange || brightenAtX !== undefined);
@@ -55,7 +55,7 @@ export function GlowEdges({
     <lineSegments geometry={edges}>
       <lineBasicMaterial
         ref={lineRef}
-        color={theme.teal}
+        color={theme.primary}
         transparent={dynamic}
         opacity={fadeRange ? 0 : 1}
         toneMapped={false}
@@ -107,7 +107,7 @@ export function HologramPart({
       <mesh geometry={geometry}>
         <meshBasicMaterial
           ref={fillRef}
-          color={theme.teal}
+          color={theme.primary}
           transparent
           opacity={fadeRange ? 0 : fillOpacity}
           depthWrite={false}

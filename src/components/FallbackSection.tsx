@@ -10,7 +10,7 @@ export default function FallbackSection() {
     >
       <p
         className="text-xs font-semibold uppercase tracking-[0.4em]"
-        style={{ color: theme.teal }}
+        style={{ color: theme.primary }}
       >
         {siteContent.business.area}
       </p>
@@ -20,7 +20,7 @@ export default function FallbackSection() {
       <a
         href={siteContent.cta.callNowHref}
         className="mt-2 rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide"
-        style={{ backgroundColor: theme.teal, color: theme.background }}
+        style={{ backgroundColor: theme.primary, color: theme.background }}
       >
         {siteContent.cta.callNowLabel}
       </a>

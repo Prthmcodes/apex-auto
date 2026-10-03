@@ -87,7 +87,7 @@ export default function EnquiryForm() {
       <div
         role="status"
         className="rounded-xl border p-6 text-center text-base text-white"
-        style={{ borderColor: `${theme.teal}4D`, backgroundColor: `${theme.teal}1A` }}
+        style={{ borderColor: `${theme.primary}4D`, backgroundColor: `${theme.primary}1A` }}
       >
         {siteContent.enquiryForm.successMessage}
       </div>
@@ -249,7 +249,7 @@ export default function EnquiryForm() {
         type="submit"
         disabled={status === "submitting"}
         className="mt-2 flex min-h-[52px] items-center justify-center rounded-full px-6 text-base font-semibold uppercase tracking-wide transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60"
-        style={{ backgroundColor: theme.teal, color: theme.background }}
+        style={{ backgroundColor: theme.primary, color: theme.background }}
       >
         {status === "submitting"
           ? siteContent.enquiryForm.submittingLabel

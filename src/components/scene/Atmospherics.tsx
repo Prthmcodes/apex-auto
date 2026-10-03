@@ -52,7 +52,7 @@ function DustParticles() {
         />
       </bufferGeometry>
       <pointsMaterial
-        color={theme.amber}
+        color={theme.accent}
         size={0.035}
         sizeAttenuation
         transparent
@@ -81,7 +81,7 @@ function LightCone() {
     <mesh position={CONE_MID} quaternion={CONE_QUATERNION}>
       <coneGeometry args={[2.4, CONE_HEIGHT, 24, 1, true]} />
       <meshBasicMaterial
-        color={theme.amber}
+        color={theme.accent}
         transparent
         opacity={0.05}
         depthWrite={false}

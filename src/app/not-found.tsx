@@ -10,7 +10,7 @@ export default function NotFound() {
     >
       <p
         className="text-xs font-semibold uppercase tracking-[0.4em]"
-        style={{ color: theme.teal }}
+        style={{ color: theme.primary }}
       >
         404
       </p>
@@ -21,7 +21,7 @@ export default function NotFound() {
       <Link
         href="/"
         className="mt-2 rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        style={{ backgroundColor: theme.teal, color: theme.background }}
+        style={{ backgroundColor: theme.primary, color: theme.background }}
       >
         Back home
       </Link>

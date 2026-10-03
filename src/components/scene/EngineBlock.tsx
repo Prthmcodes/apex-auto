@@ -58,9 +58,9 @@ function EngineLabel({
         className="whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
         style={{
           opacity: 0,
-          color: theme.teal,
+          color: theme.primary,
           backgroundColor: "rgba(6, 9, 18, 0.65)",
-          border: `1px solid ${theme.teal}66`,
+          border: `1px solid ${theme.primary}66`,
         }}
       >
         {text}

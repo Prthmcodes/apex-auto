@@ -54,4 +54,41 @@ Phase-by-phase checklist for the Apex Auto demo site. See CLAUDE.md → "Apex Au
     - **Client now shows the real error**: `EnquiryForm.tsx` previously always showed one static error string regardless of what failed. It now reads the API's actual `error` field from the response body and displays that (falling back to the generic message only if the response has none), so a rate-limited user sees the rate-limit message specifically, not a generic "something went wrong".
     - Honeypot and all existing validation unchanged and re-verified: a honeypot-triggering request from a fresh simulated IP still returns 200 with nothing logged or emailed.
     - Added `RESEND_API_KEY`/`ENQUIRY_TO_EMAIL`/`ENQUIRY_FROM_EMAIL` to `.env.example`, and a new README section ("Setting up enquiry emails") walking through creating a Resend account, verifying a domain, creating an API key, and setting the three variables in Vercel.
-- [ ] **Phase 7 — Per-client adaptation**: the "replace site.ts and go" workflow for pitching to other garages.
+- [x] **Phase 7 — Per-client adaptation**: the "replace site.ts and go" workflow for pitching to other garages.
+  - **Hard-coded-content audit**: grepped the whole tracked tree for "Apex Auto", "East London", and any hex colour outside `theme.ts`. Found and fixed two real leaks: `layout.tsx`'s metadata fallback title/description had "Apex Auto"/"East London" typed directly instead of built from `siteContent.business.*`, and `LoadingScreen.tsx` showed the literal text "Apex Auto" instead of reading the business name. Also found three colours living outside `theme.ts`: `Atmosphere.tsx`'s hemisphere/directional light colours (the scene's ambient "mood" lighting) and `HologramShell.tsx`'s solid-car colour — all three now come from new `theme.ts` fields (`ambientSky`/`ambientGround`/`ambientSun`/`carSolid`). Deliberately left two others alone: `HologramPart.tsx`'s "#ffffff" brighten target (a generic VFX constant — any colour lightens toward white, not a brand choice) and `enquiryMailer.ts`'s neutral greys (the internal garage-owner-facing email is plain by design, not on-brand styled — email client rendering is unpredictable enough without theming it).
+  - **Theme presets**: `theme.ts` restructured around three named presets — `teal` (the original), `amber-red` (warm, classic garage), `ice-blue` (clean, modern) — selected by changing one exported constant, `ACTIVE_THEME_NAME`. This required renaming every colour field from its literal name (`teal`, `amber`) to its *role* (`primary`, `accent`), since "amber" stops making sense once a preset's accent colour is actually blue — updated all ~14 consuming files via a careful sed sweep, verified by a clean `tsc`/build/lint afterward. Confirmed the default `teal` preset renders pixel-identical to before via a fresh QA screenshot pass.
+  - **Dev-only `?theme=` preview**: implemented via a module-scope (not render-time) check in `SceneGate.tsx` that mutates the shared `theme` object in place before any scene component mounts — deliberately *not* wired into anything server-rendered (mutating shared module state from server-side request handling would leak one visitor's preview into every other visitor's page), and deliberately *not* done inside the component's render body (the project's `react-hooks/purity` rule correctly rejects side effects during render; this runs once at module load instead, which is safe specifically because `SceneGate` only ever loads in the browser). Verified all three presets visually by screenshotting `/?theme=amber-red` and `/?theme=ice-blue`. Known scope limit, noted rather than silently skipped: this only reaches the client-side 3D scene and its overlays — `/book`'s server-rendered sections don't react to the query param, since they're not client components. Documented in `CLIENT-CHECKLIST.md`.
+  - **`CLIENT-CHECKLIST.md`**: a non-developer, step-by-step walkthrough — copy the repo, edit `site.ts`, pick a theme, replace placeholders, set env vars, deploy to a new Vercel project, connect a custom domain, test the form on a phone — plus a "Never do" list (no invented reviews/prices/unapproved claims) and a 10-item pre-flight list to run through before sending a client the link.
+  - **`/demo-notes`**: a dev-only page listing all six stages with a ~30-second spoken script per stage for screen-recording a pitch, plus the on-screen caption and scroll-percentage range for reference. Hidden in production via `notFound()` when `NODE_ENV === "production"` — verified both ways: a real `next build` + `next start` returns a genuine 404 for the route, while `npm run dev` serves it normally.
+
+## Development phases: done
+
+Phases 0–5 and 7 are complete and committed. **Phase 6 (actual deployment) is
+intentionally left unchecked** — nothing in this repository can responsibly
+mark "we deployed to production" as done on your behalf; that's a real,
+external action for you to take (see `README.md` → "How to deploy" and
+`CLIENT-CHECKLIST.md`). Phase 6B (enquiry email delivery) is done; 6A (the
+actual Vercel deploy + domain connection) is the one remaining manual step.
+
+## Future ideas (not started, not asked for — just worth knowing about)
+
+- Circular/soft dust-mote particles via a small custom point shader, instead
+  of three.js's default square point sprites (noted as a minor QA finding
+  in Phase 5, still unfixed).
+- A real map embed once a client has a confirmed address (currently always
+  a placeholder block, by design — there's no real address to embed yet).
+- A real reviews section, once a client supplies actual quotes — the
+  `reviews` array in `site.ts` is ready for this but intentionally empty.
+- Extending the dev-only `?theme=` preview to also affect `/book`'s
+  server-rendered sections (would need those sections to read the override
+  via `searchParams` server-side, rather than the current client-only
+  module mutation).
+- Swapping the in-memory rate limiter for a shared store (e.g. Upstash
+  Redis) if this is ever deployed across multiple server instances/regions
+  at once — the current one is explicitly scoped to "fine for a single demo
+  site" in its own code comment.
+- A lightweight analytics pass (e.g. Vercel Analytics) to see where
+  visitors actually drop off in the scroll — useful both for pitching and
+  for tuning stage pacing per client.
+- A fourth or fifth theme preset if a client's brand doesn't fit any of the
+  three on offer — the preset system is additive, so this is a small change.
