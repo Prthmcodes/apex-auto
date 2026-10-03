@@ -101,7 +101,7 @@ export default function HologramCar() {
   const arch = useMemo(() => buildArchGeometry(), []);
 
   return (
-    <group position={layout.car.position}>
+    <group position={layout.car.position} rotation={layout.car.rotation}>
       <HologramPart geometry={body} />
       <HologramPart geometry={cabin} />
       {WHEEL_POSITIONS.map((pos) => (

@@ -5,6 +5,7 @@ import Ground from "./Ground";
 import Garage from "./Garage";
 import Sign from "./Sign";
 import HologramCar from "./HologramCar";
+import Markers from "./Markers";
 import CameraRig from "./CameraRig";
 
 export default function Scene() {
@@ -15,6 +16,7 @@ export default function Scene() {
       <Garage />
       <Sign />
       <HologramCar />
+      <Markers />
       <CameraRig />
     </>
   );

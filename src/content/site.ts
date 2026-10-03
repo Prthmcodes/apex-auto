@@ -21,6 +21,48 @@ export const siteContent = {
     bookNowHref: "/book",
   },
 
+  // The six scroll stages of the home page fly-through. "range" is the
+  // [start, end] slice of scroll progress (0 to 1) each stage owns —
+  // used to fade its caption in/out and to pick its camera position.
+  stages: [
+    {
+      id: "arrive",
+      title: "Arrive",
+      caption: "Rolling up to the forecourt.",
+      range: [0, 0.1],
+    },
+    {
+      id: "inspect",
+      title: "Inspect / MOT",
+      caption: "A first look over, before the MOT check.",
+      range: [0.1, 0.3],
+    },
+    {
+      id: "wheels",
+      title: "Wheels & brakes",
+      caption: "Tyres, brakes and the running gear.",
+      range: [0.3, 0.5],
+    },
+    {
+      id: "engine",
+      title: "Engine & servicing",
+      caption: "Under the bonnet for a full service check.",
+      range: [0.5, 0.7],
+    },
+    {
+      id: "diagnostics",
+      title: "Diagnostics",
+      caption: "Full diagnostics, line by line.",
+      range: [0.7, 0.9],
+    },
+    {
+      id: "done",
+      title: "Done",
+      caption: "All done — ready when you are.",
+      range: [0.9, 1],
+    },
+  ],
+
   services: [] as string[],
   // PLACEHOLDER — add real services once confirmed, e.g. "MOT testing".
 
