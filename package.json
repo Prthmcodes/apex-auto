@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "qa:screenshots": "node scripts/qa-screenshots.mjs",
+    "qa:fallback": "node scripts/qa-fallback-check.mjs",
+    "qa:lowpower": "node scripts/qa-lowpower-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
@@ -27,6 +30,7 @@
     "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "playwright": "^1.63.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -12,6 +12,32 @@ import { positionPath, lookAtPath } from "./cameraPath";
 // Higher = snappier, lower = floatier. See THREE.MathUtils.damp.
 const DAMP_LAMBDA = 6;
 
+// Every stage's camera position/look-at was framed assuming roughly this
+// much HORIZONTAL field of view. `fov` on a PerspectiveCamera is vertical,
+// so on a narrow/portrait viewport (aspect < 1) the horizontal FOV is much
+// smaller than this for the same vertical fov — wide shots like the
+// diagnostics side-view or the arrival establishing shot don't fit. Widen
+// the vertical fov on narrow viewports to keep the horizontal framing
+// consistent; leave landscape/square viewports (aspect >= 1) alone, since
+// that's what the stage positions were actually tuned against.
+const BASE_FOV = 50;
+
+function applyResponsiveFov(camera: THREE.Camera) {
+  if (!(camera instanceof THREE.PerspectiveCamera)) return;
+  const aspect = camera.aspect || 1;
+  const targetFov =
+    aspect < 1
+      ? THREE.MathUtils.radToDeg(
+          2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(BASE_FOV) / 2) / aspect)
+        )
+      : BASE_FOV;
+
+  if (Math.abs(camera.fov - targetFov) > 0.01) {
+    camera.fov = targetFov;
+    camera.updateProjectionMatrix();
+  }
+}
+
 function stageIndexFor(progress: number) {
   const stages = siteContent.stages;
   for (let i = 0; i < stages.length; i += 1) {
@@ -29,6 +55,8 @@ export default function CameraRig() {
   const reducedMotion = useReducedMotion();
 
   useFrame(({ camera }, delta) => {
+    applyResponsiveFov(camera);
+
     const progress = THREE.MathUtils.clamp(scrollState.progress, 0, 1);
 
     if (reducedMotion.current) {

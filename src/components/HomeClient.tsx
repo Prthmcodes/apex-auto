@@ -1,27 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import dynamic from "next/dynamic";
-import ScrollRig from "@/components/ScrollRig";
-import StageOverlay from "@/components/StageOverlay";
-import ConversionOverlay from "@/components/ConversionOverlay";
-import LoadingScreen from "@/components/LoadingScreen";
-import SceneErrorBoundary from "@/components/SceneErrorBoundary";
 
-const Experience = dynamic(() => import("@/components/Experience"), {
+// next/dynamic with ssr:false can't be called from a Server Component
+// (page.tsx exports metadata, so it must stay one) — this thin client
+// wrapper is that boundary. SceneGate (and everything it imports,
+// including three.js) only ever loads in the browser.
+const SceneGate = dynamic(() => import("@/components/SceneGate"), {
   ssr: false,
 });
 
 export default function HomeClient() {
-  const [ready, setReady] = useState(false);
-
-  return (
-    <SceneErrorBoundary>
-      <Experience onReady={() => setReady(true)} />
-      <StageOverlay />
-      <ConversionOverlay />
-      <ScrollRig />
-      <LoadingScreen ready={ready} />
-    </SceneErrorBoundary>
-  );
+  return <SceneGate />;
 }

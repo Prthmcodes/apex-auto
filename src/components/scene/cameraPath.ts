@@ -10,8 +10,8 @@ export const BONNET = new THREE.Vector3(0, 0.65, -5.1);
 // Diagnostics, Done. Tweak these to reshape the fly-through.
 const ARRIVE: [number, number, number] = [0, 3.4, 32];
 const INSPECT: [number, number, number] = [0, 1.6, 4];
-const WHEELS: [number, number, number] = [2.0, 0.6, -5.0];
-const ENGINE: [number, number, number] = [0, 2.3, -4.0];
+const WHEELS: [number, number, number] = [3.46, 0.78, -4.76];
+const ENGINE: [number, number, number] = [0, 3.0, -3.0];
 const DIAGNOSTICS: [number, number, number] = [3.3, 1.3, -6.5];
 const DONE: [number, number, number] = [0, 1.7, 9];
 

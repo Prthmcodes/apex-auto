@@ -83,7 +83,14 @@ export default function StageOverlay() {
         </div>
       </div>
 
-      <div className="pointer-events-none fixed right-3 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-2.5 sm:right-6">
+      {/* A dark backdrop behind the stack: without it, a dot can wash out
+          to near-invisible when it happens to sit over a bright/bloomed
+          part of the scene (seen in QA screenshots during the brighter
+          stages). */}
+      <div
+        className="pointer-events-none fixed right-3 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-2.5 rounded-full px-1.5 py-2 sm:right-6"
+        style={{ backgroundColor: "rgba(6, 9, 18, 0.45)" }}
+      >
         {siteContent.stages.map((stage, i) => (
           <span
             key={stage.id}
