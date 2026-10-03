@@ -20,21 +20,26 @@ useGLTF.preload(MODEL_URL, DRACO_PATH);
 // How many full turns the wheels make over the entire page scroll. Tied to
 // scroll progress, not elapsed time, so it never spins on its own.
 const WHEEL_SPIN_TURNS = 4;
-// The wheels' axle direction in the model's own space.
-const AXLE_AXIS = new THREE.Vector3(0, 0, 1);
 
-// Node names from car.glb. Sketchfab's export names meshes generically
-// ("Object_N"), but each wheel node's own origin sits exactly at that
-// wheel's hub, so spinning a node in place spins the wheel. Each front
-// wheel is four parts (tyre, tyre wall, silver brake disc, black spokes);
-// each rear wheel is one. The red brake calipers are part of the body and
-// stay still, as real ones do. The front wheel on the -Z side is the one
-// the "wheels" camera looks at.
-const SPINNING_NODES = [
-  "Object_4", "Object_34", "Object_35", "Object_36", // front, -Z (focus wheel)
-  "Object_28", "Object_30", "Object_31", "Object_32", // front, +Z
-  "Object_24", // rear, -Z
-  "Object_26", // rear, +Z
+// The four wheel groups in car.glb.
+//
+// These are the model's own named groups, one per wheel. An earlier
+// version of this file span ten "Object_N" mesh nodes instead, which
+// worked only by accident: the old, over-compressed car.glb had been run
+// through gltf-transform's `flatten`, which collapsed the hierarchy and
+// left every mesh node carrying its wheel's hub position. Rebuilding the
+// model without that step (see scripts/optimise-car.mjs) restored the
+// real hierarchy — the mesh nodes now sit at the model's origin inside
+// these groups — so spinning them swung each wheel out flat around the
+// middle of the car. Spinning the named groups is what was always meant.
+//
+// The brake groups ("FR Brake_29", "FL Brake_30" — disc and caliper) are
+// deliberately left out: they stay still.
+const WHEEL_NODES = [
+  "FL Wheel_24", // front, -Z (the wheel the "wheels" camera looks at)
+  "FR Wheel_28", // front, +Z
+  "BL Wheel_26", // rear, -Z
+  "BR Wheel_27", // rear, +Z
 ];
 // The focus wheel's hub centre and the plane of its outer face, in the
 // model's own space (measured from Object_4's geometry). The brake-disc
@@ -220,6 +225,44 @@ function tuneMaterialType(source: THREE.Material, uniforms: CarUniforms): THREE.
 }
 
 /**
+ * Hangs one wheel off a new pivot group placed exactly at the centre of
+ * that wheel, so rotating the pivot turns the wheel on the spot.
+ *
+ * The centre is measured from the wheel's own geometry rather than read
+ * off the node, so this keeps working whatever a future model file does
+ * with its node origins — that assumption is precisely what broke the
+ * last time the car was recompressed.
+ *
+ * The pivot inherits the model's own axes, in which X runs front to back,
+ * Y is up and Z is the car's left-right (axle) direction — so turning the
+ * pivot about its local Z is turning the wheel about its axle.
+ */
+function makeWheelPivot(node: THREE.Object3D) {
+  const parent = node.parent!;
+  parent.updateWorldMatrix(true, true);
+
+  // setFromObject reports world space, so bring the centre back into the
+  // frame the pivot will actually live in.
+  const centre = new THREE.Box3()
+    .setFromObject(node)
+    .getCenter(new THREE.Vector3());
+  parent.worldToLocal(centre);
+
+  const pivot = new THREE.Group();
+  pivot.name = `${node.name} pivot`;
+  pivot.position.copy(centre);
+  parent.add(pivot);
+
+  // add() re-parents, so the wheel's position is now read relative to the
+  // pivot: take the pivot's own offset back out to leave the wheel
+  // standing exactly where it already was.
+  pivot.add(node);
+  node.position.sub(centre);
+
+  return pivot;
+}
+
+/**
  * Makes this component's own copy of the loaded model (the copy useGLTF
  * returns is shared and cached, so it must never be edited directly), with
  * tuned materials and handles on the parts that move.
@@ -252,9 +295,10 @@ function prepareCar(source: THREE.Object3D, envMap: THREE.Texture) {
     if (GLASS_MATERIALS.includes(original.name)) child.renderOrder = 1;
   });
 
-  const wheels = SPINNING_NODES.flatMap((name) => {
+  const wheels = WHEEL_NODES.flatMap((name) => {
     const node = root.getObjectByName(name);
-    return node ? [{ node, rest: node.quaternion.clone() }] : [];
+    if (!node?.parent) return [];
+    return [makeWheelPivot(node)];
   });
 
   // Centre on X/Z and rest the lowest point (the tyres) on Y=0, computed
@@ -280,11 +324,12 @@ function updateCar(car: PreparedCar, progress: number, reduced: boolean) {
   uniforms.uSweep.value = sweepStrength(progress, reduced);
 
   const angle = reduced ? 0 : -progress * WHEEL_SPIN_TURNS * Math.PI * 2;
-  for (const { node, rest } of wheels) {
-    node.quaternion.copy(rest);
-    // Rotates around the axle in the model's own space (the node's
-    // parent), not the node's own tilted axes.
-    node.rotateOnWorldAxis(AXLE_AXIS, angle);
+  for (const pivot of wheels) {
+    // Each pivot sits at its wheel's centre and starts unrotated, so this
+    // one assignment turns the wheel about its axle and nothing else.
+    // Setting the angle outright (rather than adding to it) keeps the
+    // wheels tied to scroll position, so scrolling back unwinds them.
+    pivot.rotation.z = angle;
   }
 }
 
