@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { siteContent } from "@/content/site";
+import { checkRateLimit, getClientKey } from "@/lib/rateLimit";
+import { sendEnquiryEmail } from "@/lib/enquiryMailer";
 
 type EnquiryPayload = {
   name?: unknown;
@@ -17,6 +20,15 @@ function isNonEmptyString(value: unknown, maxLength: number): value is string {
 }
 
 export async function POST(request: Request) {
+  // Rate limit first, before any parsing/validation work, so it also
+  // covers malformed or honeypot-triggering requests, not just valid ones.
+  if (!checkRateLimit(getClientKey(request))) {
+    return NextResponse.json(
+      { ok: false, error: siteContent.enquiryForm.rateLimitMessage },
+      { status: 429 }
+    );
+  }
+
   let body: EnquiryPayload;
   try {
     body = await request.json();
@@ -43,15 +55,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Message is too long." }, { status: 400 });
   }
 
-  // No email integration yet — just log it server-side for now.
-  console.log("[enquiry]", {
-    name: body.name,
-    phone: body.phone,
-    carReg: body.carReg,
-    service: body.service,
-    preferredDate: body.preferredDate,
+  await sendEnquiryEmail({
+    name: body.name as string,
+    phone: body.phone as string,
+    carReg: body.carReg as string,
+    service: body.service as string,
+    preferredDate: body.preferredDate as string,
     message: typeof body.message === "string" ? body.message : "",
-    receivedAt: new Date().toISOString(),
   });
 
   return NextResponse.json({ ok: true });

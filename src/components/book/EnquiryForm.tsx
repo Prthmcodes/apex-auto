@@ -28,6 +28,9 @@ export default function EnquiryForm() {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">(
     "idle"
   );
+  const [errorMessage, setErrorMessage] = useState<string>(
+    siteContent.enquiryForm.errorMessage
+  );
 
   function validate(): FieldErrors {
     const next: FieldErrors = {};
@@ -62,9 +65,19 @@ export default function EnquiryForm() {
         }),
       });
 
-      if (!response.ok) throw new Error("Request failed");
+      const data: { ok: boolean; error?: string } | null = await response
+        .json()
+        .catch(() => null);
+
+      if (!response.ok || !data?.ok) {
+        setErrorMessage(data?.error || siteContent.enquiryForm.errorMessage);
+        setStatus("error");
+        return;
+      }
+
       setStatus("success");
     } catch {
+      setErrorMessage(siteContent.enquiryForm.errorMessage);
       setStatus("error");
     }
   }
@@ -228,7 +241,7 @@ export default function EnquiryForm() {
 
       {status === "error" && (
         <p role="alert" className="text-sm text-red-400">
-          {siteContent.enquiryForm.errorMessage}
+          {errorMessage}
         </p>
       )}
 

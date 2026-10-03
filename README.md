@@ -70,20 +70,53 @@ simplest path is [Vercel](https://vercel.com/new):
 1. Push this repository to GitHub (or GitLab/Bitbucket).
 2. Import it on [vercel.com/new](https://vercel.com/new). Vercel detects
    Next.js automatically — no configuration needed.
-3. **Before the first deploy**, set one environment variable in the Vercel
-   project's settings:
+3. **Before the first deploy**, set these environment variables in the
+   Vercel project's settings (see `.env.example` for the full list):
    - `NEXT_PUBLIC_SITE_URL` — the real domain the site will live at, e.g.
      `https://apexauto.co.uk`. Without it, the site falls back to a clearly
      fake placeholder domain (used in the sitemap, robots.txt, page metadata,
      and the structured data search engines read) — harmless locally, but it
      must be set to the real domain before launch.
+   - `RESEND_API_KEY`, `ENQUIRY_TO_EMAIL`, `ENQUIRY_FROM_EMAIL` — see
+     "Setting up enquiry emails" below. Without these, the booking form
+     still works but only logs enquiries to the server console instead of
+     emailing anyone.
 4. Deploy. Vercel rebuilds automatically on every push after that.
+
+## Setting up enquiry emails
+
+The `/book` page's booking form needs these three environment variables to
+actually email enquiries instead of just logging them. It uses
+[Resend](https://resend.com) to send the email.
+
+1. **Create a Resend account** at [resend.com](https://resend.com) (there's
+   a free tier, plenty for a single garage's enquiry volume).
+2. **Add and verify your domain** under Domains in the Resend dashboard, by
+   adding the DNS records it gives you wherever the domain's DNS is managed.
+   (While testing, you can skip this and send from Resend's shared test
+   address instead — see their docs — but real customer-facing email should
+   come from your own domain.)
+3. **Create an API key** under API Keys in the dashboard. Copy it — Resend
+   only shows it once.
+4. **Set three environment variables** (in Vercel: Project → Settings →
+   Environment Variables; locally: your `.env.local`, copied from
+   `.env.example`):
+   - `RESEND_API_KEY` — the key from step 3. Never commit this anywhere —
+     that's exactly what `.env.local`/Vercel's env var UI are for.
+   - `ENQUIRY_FROM_EMAIL` — the address enquiries are sent *from*, at your
+     verified domain (e.g. `bookings@apexauto.co.uk`).
+   - `ENQUIRY_TO_EMAIL` — the address enquiries are sent *to*: wherever the
+     garage actually checks (e.g. the owner's own inbox).
+5. Redeploy (or restart `npm run dev` locally) so the new environment
+   variables take effect.
+
+Until all three are set, the form still works end-to-end for visitors — it
+just logs each enquiry to the server console instead, with a clear warning
+so it's obvious email isn't wired up yet.
 
 ### Before going live, also check
 
 - Every `PLACEHOLDER` value in `src/content/site.ts` has been replaced with
   real details (see above).
-- The `/api/enquiry` endpoint (the booking form's submit target) currently
-  only logs enquiries to the server console — there's no email or database
-  behind it yet. See the TODO note in `PROGRESS.md` for what's needed before
-  real customers rely on it.
+- Enquiry emails are actually set up and arriving (see above) — don't launch
+  with the booking form silently only logging to a console nobody reads.

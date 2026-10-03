@@ -115,6 +115,8 @@ export const siteContent = {
     successMessage:
       "Thanks — we've got your enquiry and will be in touch shortly.",
     errorMessage: "Something went wrong sending that. Please try calling us instead.",
+    rateLimitMessage:
+      "You've sent a few of these already — please wait a few minutes and try again, or call us instead.",
   },
 
   seo: {
