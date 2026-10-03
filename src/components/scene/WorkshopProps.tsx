@@ -59,6 +59,7 @@ const geometry = {
   liftPost: new THREE.BoxGeometry(0.22, 2.9, 0.26),
   liftBase: new THREE.BoxGeometry(0.46, 0.08, 0.5),
   liftArm: new THREE.BoxGeometry(0.9, 0.09, 0.12),
+  liftBand: new THREE.BoxGeometry(0.228, 0.26, 0.268),
 
   stripHousing: new THREE.BoxGeometry(0.17, 0.07, 3.0),
   stripTube: new THREE.BoxGeometry(0.12, 0.03, 2.84),
@@ -80,6 +81,7 @@ const geometry = {
   stain: new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2),
   trayBase: new THREE.BoxGeometry(0.5, 0.025, 0.36),
   signPlate: new THREE.BoxGeometry(1.5, 0.3, 0.04),
+  signFace: new THREE.PlaneGeometry(1.4, 0.24),
   grime: new THREE.PlaneGeometry(1, 1),
 };
 
@@ -116,13 +118,6 @@ const material = {
     color: theme.workshopLight,
     emissive: new THREE.Color(theme.workshopLight),
     emissiveIntensity: 1.1,
-    toneMapped: false,
-  }),
-  accent: new THREE.MeshStandardMaterial({
-    color: theme.primary,
-    emissive: new THREE.Color(theme.primary),
-    emissiveIntensity: 0.5,
-    roughness: 0.5,
     toneMapped: false,
   }),
   paper: new THREE.MeshStandardMaterial({ color: "#cdc5b4", roughness: 0.9 }),
@@ -303,7 +298,12 @@ function buildLiftPosts(root: THREE.Object3D) {
   [-1, 1].forEach((side) => {
     const g = group(root, { position: [side * 4.0, 0, -8.2] });
     add(g, geometry.liftBase, material.frameSteel, { position: [0, 0.04, 0] });
-    add(g, geometry.liftPost, material.yellow, { position: [0, 1.5, 0] });
+    // Charcoal column with one yellow band near the bottom, which is how
+    // these are actually painted — and, more to the point, a full-height
+    // saturated yellow post was the brightest thing in the room after the
+    // door light and pulled the eye straight off the car.
+    add(g, geometry.liftPost, material.frameSteel, { position: [0, 1.5, 0] });
+    add(g, geometry.liftBand, material.yellow, { position: [0, 0.42, 0] });
     add(g, geometry.liftArm, material.frameSteel, {
       position: [-side * 0.55, 0.42, 0.3],
       rotation: [0, side * 0.5, 0],
@@ -348,6 +348,10 @@ function buildRightWallDetails(root: THREE.Object3D, detailed: boolean) {
 }
 
 function buildFloorDetails(root: THREE.Object3D, detailed: boolean) {
+  // Hatching only down the left-hand edge of the bay. A matching line on
+  // the right was tried and cut: with nothing to pair with it read as a
+  // stray diagonal stripe, and it lay directly under the "wheels" camera,
+  // filling the bottom of that shot.
   const y = 0.006;
   for (let i = 0; i < 14; i += 1) {
     add(root, geometry.floorStripe, material.yellow, {
@@ -356,11 +360,6 @@ function buildFloorDetails(root: THREE.Object3D, detailed: boolean) {
       scale: [1, 1, 0.52],
     });
   }
-  add(root, geometry.floorStripe, material.yellow, {
-    position: [2.25, y, -6.4],
-    scale: [0.7, 1, 5.2],
-  });
-
   if (!detailed) return;
   add(root, geometry.stain, material.oil, {
     position: [-2.9, y - 0.001, -6.6],
@@ -380,13 +379,64 @@ function buildFloorDetails(root: THREE.Object3D, detailed: boolean) {
   add(tray, geometry.stain, material.oil, { position: [0, 0.027, 0], scale: [0.18, 1, 0.13] });
 }
 
+/**
+ * The sign's lettering, drawn in code rather than modelled or downloaded.
+ *
+ * Without it this was just a glowing rectangle on the back wall, which
+ * read as a stray coloured bar rather than signage. A canvas texture is
+ * still "generated in code" — no asset file involved.
+ */
+function makeSignTexture() {
+  const width = 512;
+  const height = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#111318";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = theme.primary;
+  ctx.font = "600 62px Rajdhani, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  // Wide letter spacing to match the headings elsewhere on the page.
+  const label = "WORKSHOP";
+  const spacing = 11;
+  const widths = [...label].map((c) => ctx.measureText(c).width);
+  const total = widths.reduce((a, b) => a + b, 0) + spacing * (label.length - 1);
+  let x = width / 2 - total / 2;
+  for (let i = 0; i < label.length; i += 1) {
+    ctx.fillText(label[i], x + widths[i] / 2, height / 2 + 4);
+    x += widths[i] + spacing;
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+let signMaterial: THREE.Material | null = null;
+function getSignMaterial() {
+  if (!signMaterial) {
+    signMaterial = new THREE.MeshStandardMaterial({
+      map: makeSignTexture(),
+      emissiveMap: makeSignTexture(),
+      emissive: new THREE.Color("#ffffff"),
+      emissiveIntensity: 0.35,
+      roughness: 0.6,
+      toneMapped: false,
+    });
+  }
+  return signMaterial;
+}
+
 function buildSign(root: THREE.Object3D) {
   const g = group(root, { position: [-2.6, 2.6, BACK + 0.06] });
   add(g, geometry.signPlate, material.dark);
-  add(g, geometry.signPlate, material.accent, {
-    scale: [0.92, 0.42, 0.9],
-    position: [0, 0, 0.012],
-  });
+  add(g, geometry.signFace, getSignMaterial(), { position: [0, 0, 0.025] });
 }
 
 function buildWallGrime(root: THREE.Object3D) {
