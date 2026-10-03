@@ -16,6 +16,10 @@
 # QA screenshots (scripts/qa-screenshots.mjs) — regenerate locally, don't commit
 /qa-screenshots
 
+# Original, unoptimised source assets (e.g. the full-res car.glb) — kept
+# locally for re-processing, never committed. See CREDITS.md for sourcing.
+/source-assets
+
 # next.js
 /.next/
 /out/

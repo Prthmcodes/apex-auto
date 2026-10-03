@@ -4,11 +4,21 @@ import { theme } from "./scene/theme";
 import { siteContent } from "@/content/site";
 
 /**
- * Fades out once the 3D scene has rendered its first frame. There's no
- * meaningful byte-level progress to track here (no large assets to fetch),
- * so the bar just jumps to full once `ready` flips true.
+ * Shows real download progress for the car model, HDR and textures (0 to
+ * 100, reported by Experience), then fades out once the 3D scene has
+ * rendered its first frame.
  */
-export default function LoadingScreen({ ready }: { ready: boolean }) {
+export default function LoadingScreen({
+  ready,
+  progress,
+}: {
+  ready: boolean;
+  progress: number;
+}) {
+  // Never show a completely empty bar, and hold just short of full until
+  // the first frame has actually rendered.
+  const width = ready ? 100 : Math.min(95, Math.max(5, progress));
+
   return (
     <div
       aria-hidden={ready}
@@ -23,12 +33,19 @@ export default function LoadingScreen({ ready }: { ready: boolean }) {
       >
         {siteContent.business.name}
       </p>
-      <div className="mt-4 h-0.5 w-40 overflow-hidden rounded-full bg-white/10">
+      <div
+        className="mt-4 h-0.5 w-40 overflow-hidden rounded-full bg-white/10"
+        role="progressbar"
+        aria-label="Loading"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(width)}
+      >
         <div
           className="h-full rounded-full transition-[width] duration-500 ease-out"
           style={{
             backgroundColor: theme.primary,
-            width: ready ? "100%" : "65%",
+            width: `${width}%`,
           }}
         />
       </div>

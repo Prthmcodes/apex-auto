@@ -13,7 +13,7 @@ import { applyThemeOverride } from "./scene/theme";
 
 // Dev-only live theme preview: ?theme=amber-red / ?theme=ice-blue / ?theme=teal.
 // Runs at module scope — once, when this module first loads — not inside
-// the component's render, so it happens before Experience/HologramCar/etc.
+// the component's render, so it happens before Experience/CarModel/etc.
 // ever mount and read `theme`'s values, and never trips the project's
 // react-hooks/purity rule (no side effects allowed during render). Safe to
 // mutate the shared `theme` object here specifically because this module
@@ -43,6 +43,7 @@ const Experience = dynamic(() => import("./Experience"), { ssr: false });
 export default function SceneGate() {
   const [webglSupported] = useState(() => hasWebGL());
   const [ready, setReady] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
 
   if (!webglSupported) {
     return <FallbackSection />;
@@ -50,11 +51,11 @@ export default function SceneGate() {
 
   return (
     <SceneErrorBoundary>
-      <Experience onReady={() => setReady(true)} />
+      <Experience onReady={() => setReady(true)} onProgress={setLoadProgress} />
       <StageOverlay />
       <ConversionOverlay />
       <ScrollRig />
-      <LoadingScreen ready={ready} />
+      <LoadingScreen ready={ready} progress={loadProgress} />
     </SceneErrorBoundary>
   );
 }

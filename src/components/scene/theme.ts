@@ -11,7 +11,7 @@ const MATERIALS = {
   engineDark: "#16171a",
   enginePlastic: "#1d1e21",
   rubber: "#0e0e10",
-  reservoir: "#d9dcdf",
+  reservoir: "#9aa1a8",
   toolSteel: "#c4c9d0",
   toolGrip: "#1c1e23",
   sparkCeramic: "#eeeae2",

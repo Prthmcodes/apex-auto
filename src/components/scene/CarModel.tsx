@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -10,232 +10,287 @@ import { theme } from "./theme";
 import scrollState from "@/lib/scrollState";
 import { useReducedMotion } from "@/lib/useReducedMotion";
 import { bandOpacity } from "./stageFade";
+import { WHEELS_RANGE, engineReveal } from "./carStages";
 import EngineBay from "./EngineBay";
 
-const MODEL_URL = "/models/car.glb";
-useGLTF.preload(MODEL_URL);
+export const MODEL_URL = "/models/car.glb";
+// The Draco decoder is served from this site (copied from three.js into
+// public/draco/), not from Google's CDN, which drei would use by default.
+export const DRACO_PATH = "/draco/";
+useGLTF.preload(MODEL_URL, DRACO_PATH);
 
 // How many full turns the wheels make over the entire page scroll. Tied to
-// scroll progress, not elapsed time, so it never spins on its own — matches
-// the old procedural car's convention.
+// scroll progress, not elapsed time, so it never spins on its own.
 const WHEEL_SPIN_TURNS = 4;
+// The wheels' axle direction in the model's own space.
 const AXLE_AXIS = new THREE.Vector3(0, 0, 1);
 
-// Node names from the optimised car.glb (logged via gltf-transform inspect
-// — Sketchfab's export leaves meshes generically named "Object_N", but each
-// wheel's own node translation sits exactly at that wheel's hub centre, so
-// spinning is a rotation around local Z applied in the node's own parent
-// space, not a hand-placed pivot). The front, -Z wheel is the one the
-// "wheels" stage camera and cameraPath.ts's FRONT_WHEEL focus on.
-const WHEELS = [
-  { tyre: "Object_4", spinWith: ["Object_34", "Object_36"], caliper: "Object_35" },
-  { tyre: "Object_28", spinWith: ["Object_31", "Object_30"], caliper: "Object_32" },
-  { tyre: "Object_24", spinWith: [], caliper: null },
-  { tyre: "Object_26", spinWith: [], caliper: null },
-] as const;
+// Node names from car.glb. Sketchfab's export names meshes generically
+// ("Object_N"), but each wheel node's own origin sits exactly at that
+// wheel's hub, so spinning a node in place spins the wheel. Each front
+// wheel is four parts (tyre, tyre wall, silver brake disc, black spokes);
+// each rear wheel is one. The red brake calipers are part of the body and
+// stay still, as real ones do. The front wheel on the -Z side is the one
+// the "wheels" camera looks at.
+const SPINNING_NODES = [
+  "Object_4", "Object_34", "Object_35", "Object_36", // front, -Z (focus wheel)
+  "Object_28", "Object_30", "Object_31", "Object_32", // front, +Z
+  "Object_24", // rear, -Z
+  "Object_26", // rear, +Z
+];
+// The focus wheel's brake disc, which glows softly during "wheels".
+const FOCUS_DISC = "Object_34";
 
-const WHEELS_STAGE_RANGE = siteContent.stages[2].range;
+// The bonnet, in the model's own space (X is front to back, Y is up). The
+// paint turns see-through above BONNET_MIN_Y and forward of BONNET_REAR_X
+// during the "engine" stage, revealing the engine bay (EngineBay.tsx).
+// The model has no separate bonnet part, so it can't swing open; this is
+// the fallback agreed in the Phase 8B brief.
+const BONNET_REAR_X = 1.08;
+const BONNET_MIN_Y = 0.92;
 
-// The real hub centre of the front, -Z wheel (Object_4's own translation —
-// see WHEELS above), in the model's original local space. Used to place
-// the brake-disc highlight ring without needing the runtime centre offset.
-const FOCUS_WHEEL_LOCAL: [number, number, number] = [1.607, 0.428, -1.171];
+const GLASS_MATERIALS = ["Glass", "Trasnsparent_Glass", "Yellow_Glass"];
+// Everything that can sit on top of the bonnet (paint, the carbon bonnet
+// panel itself, the badge lettering, grille trim) fades with the x-ray.
+// Headlights are left solid so the car's face stays recognisable.
+const XRAY_MATERIALS = ["Car_Paint", "Carbon", "Plastic", "Metalic", "Black_Metal", "Red_Metal", "Reflectors"];
 
-// The bonnet region, in the model's own untransformed local space (the GLB
-// has no separate hood node — confirmed via gltf-transform inspect, every
-// mesh is a generic flattened "Object_N" — so instead of hinging a hood,
-// the paint shader fades to translucent over this box so the procedural
-// x-ray engine bay (EngineBay.tsx) reads as visible underneath it).
-const BONNET_LOCAL = { xMin: 1.05, xMax: 2.3, yMin: 0.92, yMax: 1.38 };
+type CarUniforms = {
+  uSceneInverse: { value: THREE.Matrix4 };
+  uXray: { value: number };
+  uXrayColor: { value: THREE.Color };
+};
 
-function applyBonnetXray(material: THREE.MeshPhysicalMaterial) {
+/** Adds the see-through-bonnet effect to a material's built-in shader. */
+function addBonnetXray(material: THREE.MeshStandardMaterial, uniforms: CarUniforms) {
   material.transparent = true;
   material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
-        "varying vec3 vLocalPosition;\n#include <common>"
+        "uniform mat4 uSceneInverse;\nvarying vec3 vCarPos;\n#include <common>"
       )
       .replace(
-        "#include <begin_vertex>",
-        "#include <begin_vertex>\nvLocalPosition = position;"
+        "#include <project_vertex>",
+        // The vertex's position in the car model's own space, whatever
+        // scaling/rotation each individual mesh node carries.
+        "#include <project_vertex>\nvCarPos = (uSceneInverse * modelMatrix * vec4(transformed, 1.0)).xyz;"
       );
-
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
-        "varying vec3 vLocalPosition;\n#include <common>"
+        "uniform float uXray;\nuniform vec3 uXrayColor;\nvarying vec3 vCarPos;\n#include <common>"
       )
       .replace(
-        "#include <output_fragment>",
+        "#include <opaque_fragment>",
         `
-        float bonnetX = smoothstep(${BONNET_LOCAL.xMin.toFixed(2)}, ${(BONNET_LOCAL.xMin + 0.35).toFixed(2)}, vLocalPosition.x)
-          * (1.0 - smoothstep(${(BONNET_LOCAL.xMax - 0.35).toFixed(2)}, ${BONNET_LOCAL.xMax.toFixed(2)}, vLocalPosition.x));
-        float bonnetY = smoothstep(${BONNET_LOCAL.yMin.toFixed(2)}, ${(BONNET_LOCAL.yMin + 0.1).toFixed(2)}, vLocalPosition.y)
-          * (1.0 - smoothstep(${(BONNET_LOCAL.yMax - 0.1).toFixed(2)}, ${BONNET_LOCAL.yMax.toFixed(2)}, vLocalPosition.y));
-        float bonnetMask = bonnetX * bonnetY;
-        diffuseColor.a = mix(diffuseColor.a, 0.22, bonnetMask);
-        #include <output_fragment>
+        float bonnet = smoothstep(${BONNET_REAR_X.toFixed(3)}, ${(BONNET_REAR_X + 0.2).toFixed(3)}, vCarPos.x)
+          * smoothstep(${BONNET_MIN_Y.toFixed(3)}, ${(BONNET_MIN_Y + 0.08).toFixed(3)}, vCarPos.y);
+        float xray = bonnet * uXray;
+        // A faint accent tint along the edge of the see-through area, so it
+        // reads as a deliberate cut-away rather than a rendering glitch.
+        float rim = xray * (1.0 - xray) * 4.0;
+        outgoingLight += uXrayColor * rim * 0.06;
+        diffuseColor.a = mix(diffuseColor.a, 0.1, xray);
+        #include <opaque_fragment>
         `
       );
   };
+  // Stops three.js reusing a cached copy of the plain shader for this one.
+  material.customProgramCacheKey = () => "car-bonnet-xray";
+}
+
+/** Swaps one of the model's materials for a tuned, realistic copy. */
+function tuneMaterial(source: THREE.Material, uniforms: CarUniforms): THREE.Material {
+  const name = source.name;
+
+  if (GLASS_MATERIALS.includes(name)) {
+    // Plain tinted glass rather than true "transmission" glass, which costs
+    // an extra full render of the scene every frame. Dark privacy glass
+    // suits a black SUV and still shows the HDR's reflections.
+    const isHeadlamp = name === "Trasnsparent_Glass";
+    const isIndicator = name === "Yellow_Glass";
+    return new THREE.MeshPhysicalMaterial({
+      name,
+      color: isHeadlamp
+        ? theme.headlampGlass
+        : isIndicator
+          ? theme.indicatorGlass
+          : theme.glassTint,
+      metalness: 0,
+      roughness: 0.04,
+      transparent: true,
+      opacity: isHeadlamp ? 0.18 : isIndicator ? 0.55 : 0.72,
+      clearcoat: 1,
+      clearcoatRoughness: 0.03,
+      envMapIntensity: 1.6,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+  }
+
+  const material = source.clone() as THREE.MeshStandardMaterial;
+
+  switch (name) {
+    case "Car_Paint": {
+      const paint = new THREE.MeshPhysicalMaterial({
+        name,
+        color: siteContent.carColor,
+        metalness: 0.35,
+        roughness: 0.4,
+        clearcoat: 1,
+        // A touch of softness hides the model's slightly uneven panels,
+        // which a perfect mirror finish shows up as crinkles.
+        clearcoatRoughness: 0.14,
+        envMapIntensity: 1.4,
+      });
+      addBonnetXray(paint, uniforms);
+      return paint;
+    }
+    case "Tyre":
+      material.color.set(theme.tyreTint);
+      material.metalness = 0;
+      material.roughness = 0.88;
+      material.envMapIntensity = 0.35;
+      break;
+    case "Carbon":
+      // The model's carbon-fibre bonnet: keep its weave, lose the odd
+      // fully-metallic setting it was exported with.
+      material.metalness = 0.3;
+      material.roughness = 0.45;
+      break;
+    case "Reflectors":
+      material.metalness = 0.25;
+      break;
+    case "Metalic":
+      // Wheel spokes and trim: polished alloy rather than a perfect mirror.
+      material.roughness = 0.18;
+      material.envMapIntensity = 1.3;
+      break;
+    case "Head_Light":
+      material.emissive.set(theme.headlampGlow);
+      material.emissiveIntensity = 0.35;
+      break;
+    case "Tail_Light":
+      material.emissive.set(theme.tailLampGlow);
+      material.emissiveIntensity = 0.5;
+      break;
+  }
+  if (XRAY_MATERIALS.includes(name)) addBonnetXray(material, uniforms);
+  return material;
 }
 
 /**
- * Loads the real car.glb, auto-centres and grounds it, applies the realism
- * material pass (gloss black clearcoat paint with a translucent bonnet
- * patch, true see-through glass, dark tyres), and spins the wheels with
- * scroll. See PROGRESS.md's Phase 8B entry for the node/material names
- * logged while building this.
+ * Makes this component's own copy of the loaded model (the copy useGLTF
+ * returns is shared and cached, so it must never be edited directly), with
+ * tuned materials and handles on the parts that move.
+ */
+function prepareCar(source: THREE.Object3D) {
+  const root = source.clone(true);
+  const uniforms: CarUniforms = {
+    uSceneInverse: { value: new THREE.Matrix4() },
+    uXray: { value: 0 },
+    uXrayColor: { value: new THREE.Color(theme.primary) },
+  };
+
+  const tuned = new Map<THREE.Material, THREE.Material>();
+  root.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    child.castShadow = true;
+    child.receiveShadow = true;
+    const original = child.material as THREE.Material;
+    let replacement = tuned.get(original);
+    if (!replacement) {
+      replacement = tuneMaterial(original, uniforms);
+      tuned.set(original, replacement);
+    }
+    child.material = replacement;
+    // Draw glass after the paint, so the see-through bonnet and the glass
+    // never fight over which one is in front.
+    if (GLASS_MATERIALS.includes(original.name)) child.renderOrder = 1;
+  });
+
+  const wheels = SPINNING_NODES.flatMap((name) => {
+    const node = root.getObjectByName(name);
+    return node ? [{ node, rest: node.quaternion.clone() }] : [];
+  });
+
+  // The focus disc gets its own plain material copy, so its glow doesn't
+  // light up every other part that shares the same metal.
+  let discMaterial: THREE.MeshStandardMaterial | null = null;
+  const disc = root.getObjectByName(FOCUS_DISC);
+  if (disc instanceof THREE.Mesh) {
+    discMaterial = new THREE.MeshStandardMaterial().copy(
+      disc.material as THREE.MeshStandardMaterial
+    );
+    discMaterial.onBeforeCompile = () => {};
+    discMaterial.transparent = false;
+    discMaterial.customProgramCacheKey = () => "brake-disc";
+    discMaterial.emissive.set(theme.primary);
+    discMaterial.emissiveIntensity = 0;
+    disc.material = discMaterial;
+  }
+
+  // Centre on X/Z and rest the lowest point (the tyres) on Y=0, computed
+  // from the model's own geometry, never hard-coded.
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const centre = box.getCenter(new THREE.Vector3());
+  const offset: [number, number, number] = [-centre.x, -box.min.y, -centre.z];
+  const scale = layout.car.length / size.x;
+
+  return { root, uniforms, wheels, discMaterial, offset, scale };
+}
+
+type PreparedCar = ReturnType<typeof prepareCar>;
+
+/** Per-frame update: bonnet see-through, wheel spin and brake disc glow. */
+function updateCar(car: PreparedCar, progress: number, reduced: boolean) {
+  const { root, uniforms, wheels, discMaterial } = car;
+
+  uniforms.uSceneInverse.value.copy(root.matrixWorld).invert();
+  uniforms.uXray.value = engineReveal(progress, reduced);
+
+  const angle = reduced ? 0 : -progress * WHEEL_SPIN_TURNS * Math.PI * 2;
+  for (const { node, rest } of wheels) {
+    node.quaternion.copy(rest);
+    // Rotates around the axle in the model's own space (the node's
+    // parent), not the node's own tilted axes.
+    node.rotateOnWorldAxis(AXLE_AXIS, angle);
+  }
+
+  if (discMaterial) {
+    discMaterial.emissiveIntensity =
+      0.9 * bandOpacity(progress, WHEELS_RANGE, reduced ? 0.001 : 0.04);
+  }
+}
+
+/**
+ * The real car: loads car.glb, centres and grounds it, applies the realism
+ * material pass (gloss black clearcoat paint, dark glass, rubber tyres),
+ * spins the wheels with scroll, glows the brake disc during "wheels",
+ * and turns the bonnet see-through over the engine bay during "engine".
  */
 export default function CarModel() {
-  const { scene, nodes, materials } = useGLTF(MODEL_URL);
+  const { scene } = useGLTF(MODEL_URL, DRACO_PATH);
+  const car = useMemo(() => prepareCar(scene), [scene]);
   const reducedMotion = useReducedMotion();
-  const wheelBases = useRef<Map<string, THREE.Quaternion>>(new Map());
-
-  // Auto-centre on X/Z and rest the lowest point (the tyres) on Y=0, so the
-  // car sits correctly regardless of how the source model happened to be
-  // authored — computed from the model's own geometry, never hard-coded.
-  const centerOffset = useMemo(() => {
-    const box = new THREE.Box3().setFromObject(scene);
-    const center = box.getCenter(new THREE.Vector3());
-    return [-center.x, -box.min.y, -center.z] as [number, number, number];
-  }, [scene]);
-
-  useEffect(() => {
-    console.log(
-      "[CarModel] nodes:",
-      Object.keys(nodes).join(", ")
-    );
-    console.log(
-      "[CarModel] materials:",
-      Object.keys(materials).join(", ")
-    );
-
-    const paint = materials.Car_Paint as THREE.MeshPhysicalMaterial | undefined;
-    if (paint) {
-      paint.color = new THREE.Color(siteContent.carColor);
-      paint.roughness = 0.35;
-      paint.metalness = 0.6;
-      paint.clearcoat = 1;
-      paint.clearcoatRoughness = 0.05;
-      paint.envMapIntensity = 1.2;
-      applyBonnetXray(paint);
-      paint.needsUpdate = true;
-    }
-
-    const tyre = materials.Tyre as THREE.MeshStandardMaterial | undefined;
-    if (tyre) {
-      tyre.roughness = Math.max(tyre.roughness, 0.85);
-      tyre.envMapIntensity = 0.4;
-    }
-
-    // Replace the glass-family materials with true transmissive glass —
-    // the file has no KHR_materials_transmission, so without this they're
-    // opaque surfaces that only read as "glass" via reflections, which go
-    // solid black with no environment map lighting them.
-    const glassNames = ["Glass", "Trasnsparent_Glass", "Yellow_Glass"];
-    const glassMaterials = new Map<string, THREE.MeshPhysicalMaterial>();
-    for (const name of glassNames) {
-      const existing = materials[name];
-      if (!existing) continue;
-      const tint = name === "Yellow_Glass" ? "#3a3a28" : "#1a1d22";
-      const glass = new THREE.MeshPhysicalMaterial({
-        color: tint,
-        transmission: 0.88,
-        roughness: 0.12,
-        thickness: 0.4,
-        ior: 1.5,
-        metalness: 0,
-        clearcoat: 0.4,
-        clearcoatRoughness: 0.1,
-        side: THREE.DoubleSide,
-      });
-      glassMaterials.set(name, glass);
-    }
-    if (glassMaterials.size > 0) {
-      scene.traverse((child) => {
-        if (!(child instanceof THREE.Mesh)) return;
-        const replacement = glassMaterials.get(child.material?.name);
-        if (replacement) child.material = replacement;
-      });
-    }
-  }, [nodes, materials, scene]);
-
-  // Capture each spinning wheel node's original (static) orientation once,
-  // so every frame can set an absolute spin angle from scroll progress
-  // instead of accumulating a delta — consistent with the rest of the
-  // scene, and correct when the user scrolls backward.
-  useEffect(() => {
-    for (const wheel of WHEELS) {
-      for (const name of [wheel.tyre, ...wheel.spinWith]) {
-        const node = nodes[name];
-        if (node && !wheelBases.current.has(name)) {
-          wheelBases.current.set(name, node.quaternion.clone());
-        }
-      }
-    }
-  }, [nodes]);
 
   useFrame(() => {
-    const angle = reducedMotion.current
-      ? 0
-      : -scrollState.progress * WHEEL_SPIN_TURNS * Math.PI * 2;
-
-    for (const wheel of WHEELS) {
-      for (const name of [wheel.tyre, ...wheel.spinWith]) {
-        const node = nodes[name];
-        const base = wheelBases.current.get(name);
-        if (!node || !base) continue;
-        node.quaternion.copy(base);
-        node.rotateOnWorldAxis(AXLE_AXIS, angle);
-      }
-    }
+    updateCar(car, scrollState.progress, reducedMotion.current);
   });
 
   return (
-    <group position={layout.car.position} rotation={layout.car.rotation}>
-      <group position={centerOffset}>
-        <primitive object={scene} />
+    <group
+      position={layout.car.position}
+      rotation={layout.car.rotation}
+      scale={car.scale}
+    >
+      <group position={car.offset}>
+        <primitive object={car.root} />
         <EngineBay />
-        <BrakeDiscHighlight />
       </group>
     </group>
-  );
-}
-
-const discRingGeometry = new THREE.TorusGeometry(0.17, 0.012, 8, 32);
-
-/**
- * A thin glowing ring laid over the front wheel's real brake disc during
- * the "wheels" stage — an accent on top of the GLB's own geometry rather
- * than a material swap, so it doesn't depend on guessing which THREE
- * material class the model's disc node happened to load as.
- */
-function BrakeDiscHighlight() {
-  const materialRef = useRef<THREE.MeshBasicMaterial>(null!);
-  const reducedMotion = useReducedMotion();
-
-  useFrame(() => {
-    const opacity = reducedMotion.current
-      ? bandOpacity(scrollState.progress, WHEELS_STAGE_RANGE, 0.001)
-      : bandOpacity(scrollState.progress, WHEELS_STAGE_RANGE);
-    materialRef.current.opacity = opacity * 0.9;
-  });
-
-  return (
-    <mesh
-      position={FOCUS_WHEEL_LOCAL}
-      rotation={[0, Math.PI / 2, 0]}
-      geometry={discRingGeometry}
-    >
-      <meshBasicMaterial
-        ref={materialRef}
-        color={theme.primary}
-        transparent
-        opacity={0}
-        toneMapped={false}
-      />
-    </mesh>
   );
 }

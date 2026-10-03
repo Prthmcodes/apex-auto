@@ -13,7 +13,7 @@ Two pages:
 **Rules:**
 - Work one phase at a time (see PROGRESS.md) and stop for review before starting the next.
 - Explain changes in plain English — the owner is not a front-end developer.
-- No `.glb` models or other 3D asset files — every shape is generated in code.
+- No `.glb` models or other 3D asset files — every shape is generated in code. Overridden in Phase 8B: a single real car model (`public/models/car.glb`, CC BY 4.0, credited in `CREDITS.md` and the page) plus one HDR environment map (`public/hdr/dusk.exr`) are allowed; everything else (garage, tools, engine bay) stays procedural.
 - All business details live in `src/content/site.ts` as clearly marked PLACEHOLDER values. Never invent reviews, prices, or contact details.
 - "Call now" and "Book now" are real HTML buttons, rendered outside the canvas (not drawn in the 3D scene).
 - Scene code lives in `src/components/scene`, with all colours defined in one theme file.

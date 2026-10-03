@@ -137,7 +137,7 @@ function useBayGeometry() {
     const airBox = roundedBox(0.36, 0.14, 0.3, 0.04);
 
     return {
-      floor: new THREE.BoxGeometry(1.3, 0.02, 1.8),
+      floor: new THREE.BoxGeometry(1.05, 0.02, 1.45),
       block: roundedBox(0.56, 0.3, 0.74, 0.04),
       cover: roundedBox(0.52, 0.06, 0.62, 0.025),
       plenum: new THREE.CylinderGeometry(0.075, 0.075, 0.6, 20).rotateX(Math.PI / 2),
@@ -146,7 +146,7 @@ function useBayGeometry() {
       oilCap: new THREE.CylinderGeometry(0.042, 0.042, 0.035, 20),
       battery: roundedBox(0.28, 0.2, 0.19, 0.015),
       terminal: new THREE.CylinderGeometry(0.016, 0.016, 0.035, 10),
-      coolantTank: roundedBox(0.2, 0.14, 0.24, 0.03),
+      coolantTank: roundedBox(0.17, 0.12, 0.2, 0.03),
       reservoir: new THREE.CylinderGeometry(0.058, 0.064, 0.12, 20),
       cap: new THREE.CylinderGeometry(0.036, 0.036, 0.03, 16),
       radiator: new THREE.BoxGeometry(0.05, 0.42, 1.3),
@@ -285,7 +285,7 @@ export default function EngineBay() {
   return (
     <group ref={groupRef} visible={false}>
       {/* dark floor of the bay, so nothing below shows through */}
-      <Part geometry={g.floor} position={[1.68, 0.6, BAY_Z]} color={theme.engineDark} roughness={0.8} metalness={0.2} edges={false} />
+      <Part geometry={g.floor} position={[1.66, 0.58, BAY_Z]} color={theme.engineDark} roughness={0.8} metalness={0.2} edges={false} />
 
       {/* engine block, cover and intake */}
       <Part geometry={g.block} position={[1.62, 0.8, BAY_Z]} color={theme.engineMetal} />

@@ -1,17 +1,21 @@
 import * as THREE from "three";
 
 // Points of interest in the scene, shared by the camera's look-at path and
-// the glowing marker dots on the car.
-export const CAR_CENTER = new THREE.Vector3(0, 0.75, -6.5);
-export const FRONT_WHEEL = new THREE.Vector3(0.78, 0.45, -5.2);
-export const BONNET = new THREE.Vector3(0, 0.65, -5.1);
+// the glowing marker dots on the car. Computed from the real car.glb's own
+// geometry (see CarModel.tsx's auto-centring) — not guessed: the model is
+// centred on X/Z and rested on Y=0 at layout.car.position, nose toward +Z,
+// so a local-space point (lx, ly, lz) relative to the model's own bbox
+// centre maps to world as (carX - lz, ly, carZ + lx).
+export const CAR_CENTER = new THREE.Vector3(0, 0.9, -6.5);
+export const FRONT_WHEEL = new THREE.Vector3(0.79, 0.41, -4.93);
+export const BONNET = new THREE.Vector3(0, 0.98, -4.74);
 
 // One camera position per stage: Arrive, Inspect, Wheels, Engine,
 // Diagnostics, Done. Tweak these to reshape the fly-through.
 const ARRIVE: [number, number, number] = [0, 3.4, 32];
 const INSPECT: [number, number, number] = [0, 1.6, 4];
 const WHEELS: [number, number, number] = [3.46, 0.78, -4.76];
-const ENGINE: [number, number, number] = [0, 3.0, -3.0];
+const ENGINE: [number, number, number] = [0, 3.36, -2.69];
 const DIAGNOSTICS: [number, number, number] = [3.3, 1.3, -6.5];
 const DONE: [number, number, number] = [0, 1.7, 9];
 
