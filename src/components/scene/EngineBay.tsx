@@ -29,7 +29,9 @@ const CHECK_POSITIONS: Vec3[] = [
 ];
 
 const LABEL_LIFT = 0.2;
-const INTRO_POSITION: Vec3 = [1.62, 1.5, BAY_Z];
+// At the front of the bay, by the grille: the one spot that stays clear of
+// the check labels on both wide screens and upright phones.
+const INTRO_POSITION: Vec3 = [2.42, 1.2, BAY_Z];
 
 // Built once and shared by every glow marker.
 const ringGeometry = new THREE.TorusGeometry(0.075, 0.006, 8, 40);
@@ -254,8 +256,8 @@ function IntroLabel({ text }: { text: string }) {
     <Html position={INTRO_POSITION} center pointerEvents="none" zIndexRange={[20, 0]}>
       <div
         ref={ref}
-        className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.3em]"
-        style={{ opacity: 0, color: theme.primary }}
+        className="whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] backdrop-blur-sm"
+        style={{ opacity: 0, color: theme.primary, backgroundColor: `${theme.background}cc` }}
       >
         {text}
       </div>

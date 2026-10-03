@@ -156,9 +156,11 @@ function tuneMaterialType(source: THREE.Material, uniforms: CarUniforms): THREE.
       roughness: 0.04,
       transparent: true,
       opacity: isHeadlamp ? 0.18 : isIndicator ? 0.55 : 0.72,
-      clearcoat: 1,
-      clearcoatRoughness: 0.03,
-      envMapIntensity: 1.6,
+      clearcoat: 0.5,
+      clearcoatRoughness: 0.05,
+      // Kept modest: stronger, and the workshop lights flare into a white
+      // blob across the windscreen.
+      envMapIntensity: 0.9,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
@@ -177,7 +179,9 @@ function tuneMaterialType(source: THREE.Material, uniforms: CarUniforms): THREE.
         // A touch of softness hides the model's slightly uneven panels,
         // which a perfect mirror finish shows up as crinkles.
         clearcoatRoughness: 0.14,
-        envMapIntensity: 1.4,
+        // Enough reflection to show the body's shape, not so much that
+        // gloss black starts reading as silver.
+        envMapIntensity: 0.75,
       });
       addBonnetXray(paint, uniforms);
       return paint;

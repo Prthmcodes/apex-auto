@@ -51,7 +51,7 @@ function LineMarkings() {
 /** A low kerb marking the far edge of the forecourt. */
 function Kerb() {
   return (
-    <mesh position={[0, 0.08, 24]}>
+    <mesh position={[0, 0.08, 28.5]}>
       <boxGeometry args={[20, 0.16, 0.4]} />
       <meshStandardMaterial color="#8a8a82" roughness={0.9} />
     </mesh>

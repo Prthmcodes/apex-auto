@@ -174,7 +174,7 @@ const TOOLS: ToolSpec[] = [
     name: "spanner",
     parts: [{ geometry: geometry.spanner, material: material.steel }],
     scale: 1.5,
-    wide: { engine: [-1.6, 1.25, -4.2], diagnostics: [-2.2, 2.35, -4.2] },
+    wide: { engine: [-1.6, 1.25, -4.2], diagnostics: [-1.4, 2.22, -4.2] },
     tall: { engine: [-1.5, 1.6, -9.5], diagnostics: [-1.2, 2.75, -5.0] },
     tilt: [0.5, 0.3, 0.4],
   },
@@ -186,7 +186,7 @@ const TOOLS: ToolSpec[] = [
       { geometry: geometry.bottleCap, material: material.grip, position: [0, 0.232, 0] },
     ],
     scale: 1.3,
-    wide: { engine: [1.6, 1.1, -4.4], diagnostics: [-2.2, 2.40, -5.2] },
+    wide: { engine: [1.6, 1.1, -4.4], diagnostics: [-1.4, 2.27, -5.2] },
     tall: { engine: [-0.9, 1.25, -9.8], diagnostics: [-1.2, 3.05, -5.6] },
     tilt: [0.25, 0, -0.3],
   },
@@ -198,7 +198,7 @@ const TOOLS: ToolSpec[] = [
       { geometry: geometry.caliper, material: material.caliper, position: [0, 0.13, 0.02] },
     ],
     scale: 1.2,
-    wide: { engine: [-1.7, 1.0, -5.2], diagnostics: [-2.2, 2.35, -6.3] },
+    wide: { engine: [-1.7, 1.0, -5.2], diagnostics: [-1.4, 2.22, -6.3] },
     tall: { engine: [-0.3, 1.65, -9.5], diagnostics: [-1.2, 2.8, -6.2] },
     tilt: [0.2, 0.7, 0],
   },
@@ -212,7 +212,7 @@ const TOOLS: ToolSpec[] = [
       { geometry: geometry.gaugeChuck, material: material.steel, position: [0, -0.175, 0] },
     ],
     scale: 1.7,
-    wide: { engine: [1.65, 1.55, -5.3], diagnostics: [-2.2, 2.45, -7.3] },
+    wide: { engine: [1.65, 1.55, -5.3], diagnostics: [-1.4, 2.30, -7.3] },
     tall: { engine: [0.3, 1.3, -9.8], diagnostics: [-1.2, 3.1, -6.8] },
     tilt: [0.1, -0.5, 0.25],
   },
@@ -225,7 +225,7 @@ const TOOLS: ToolSpec[] = [
       { geometry: geometry.plugTip, material: material.steel, position: [0, -0.016, 0] },
     ],
     scale: 2.2,
-    wide: { engine: [-1.75, 1.5, -5.6], diagnostics: [-2.2, 2.35, -8.3] },
+    wide: { engine: [-1.75, 1.5, -5.6], diagnostics: [-1.4, 2.22, -8.3] },
     tall: { engine: [0.9, 1.7, -9.5], diagnostics: [-1.2, 2.75, -7.4] },
     tilt: [0.6, 0, 0.5],
   },
@@ -238,7 +238,7 @@ const TOOLS: ToolSpec[] = [
       { geometry: geometry.wrenchCollar, material: material.accent, position: [0.095, 0, 0] },
     ],
     scale: 1.2,
-    wide: { engine: [1.45, 0.8, -4.0], diagnostics: [-2.2, 2.40, -9.2] },
+    wide: { engine: [1.45, 0.8, -4.0], diagnostics: [-1.4, 2.27, -9.2] },
     tall: { engine: [1.5, 1.3, -9.6], diagnostics: [-1.2, 3.0, -8.0] },
     tilt: [0.3, 0.4, -0.25],
   },
@@ -277,9 +277,12 @@ function FloatingTool({ tool, index }: { tool: ToolSpec; index: number }) {
     // A slow, gentle hover and turn; switched off for reduced motion.
     const t = reduced ? 0 : clock.elapsedTime;
     const bob = Math.sin(t * 0.7 + phase) * 0.04;
+    // While gliding between the two stages' spots, arc up and over the
+    // roof rather than cutting through the car.
+    const arc = Math.sin(move * Math.PI) * 0.9;
     group.position.set(
       THREE.MathUtils.lerp(ex, dx, move),
-      THREE.MathUtils.lerp(ey, dy, move) + bob - (1 - eased) * 0.15,
+      THREE.MathUtils.lerp(ey, dy, move) + arc + bob - (1 - eased) * 0.15,
       THREE.MathUtils.lerp(ez, dz, move)
     );
     group.rotation.set(
