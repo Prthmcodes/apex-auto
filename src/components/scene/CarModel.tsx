@@ -10,7 +10,7 @@ import { theme } from "./theme";
 import scrollState from "@/lib/scrollState";
 import { useReducedMotion } from "@/lib/useReducedMotion";
 import { bandOpacity } from "./stageFade";
-import { WHEELS_RANGE, engineReveal } from "./carStages";
+import { WHEELS_RANGE, engineReveal, sweepX, sweepStrength } from "./carStages";
 import EngineBay from "./EngineBay";
 
 export const MODEL_URL = "/models/car.glb";
@@ -63,9 +63,21 @@ type CarUniforms = {
   uSceneInverse: { value: THREE.Matrix4 };
   uXray: { value: number };
   uXrayColor: { value: THREE.Color };
+  uSweepX: { value: number };
+  uSweep: { value: number };
+  uSweepColor: { value: THREE.Color };
 };
 
-/** Adds the see-through-bonnet effect to a material's built-in shader. */
+// Where the diagnostics sweep's real light sits, in the model's own space:
+// level with the windows, out on the side the diagnostics camera views.
+const SWEEP_LIGHT_HEIGHT = 1.25;
+const SWEEP_LIGHT_SIDE_Z = -2.3;
+
+/**
+ * Adds two effects to a material's built-in shader: the see-through bonnet
+ * (engine stage) and a soft vertical band of light that travels along the
+ * body (diagnostics stage).
+ */
 function addBonnetXray(material: THREE.MeshStandardMaterial, uniforms: CarUniforms) {
   material.transparent = true;
   material.onBeforeCompile = (shader) => {
@@ -84,7 +96,14 @@ function addBonnetXray(material: THREE.MeshStandardMaterial, uniforms: CarUnifor
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
-        "uniform float uXray;\nuniform vec3 uXrayColor;\nvarying vec3 vCarPos;\n#include <common>"
+        "uniform float uXray;\nuniform vec3 uXrayColor;\nuniform float uSweepX;\nuniform float uSweep;\nuniform vec3 uSweepColor;\nvarying vec3 vCarPos;\n#include <common>"
+      )
+      .replace(
+        "#include <emissivemap_fragment>",
+        `#include <emissivemap_fragment>
+        // The diagnostics sweep: a soft vertical band of light at uSweepX.
+        float sweepOffset = (vCarPos.x - uSweepX) / 0.14;
+        totalEmissiveRadiance += uSweepColor * exp(-sweepOffset * sweepOffset) * uSweep * 0.16;`
       )
       .replace(
         "#include <opaque_fragment>",
@@ -102,7 +121,7 @@ function addBonnetXray(material: THREE.MeshStandardMaterial, uniforms: CarUnifor
       );
   };
   // Stops three.js reusing a cached copy of the plain shader for this one.
-  material.customProgramCacheKey = () => "car-bonnet-xray";
+  material.customProgramCacheKey = () => "car-xray-sweep";
 }
 
 /** Swaps one of the model's materials for a tuned, realistic copy. */
@@ -196,6 +215,9 @@ function prepareCar(source: THREE.Object3D) {
     uSceneInverse: { value: new THREE.Matrix4() },
     uXray: { value: 0 },
     uXrayColor: { value: new THREE.Color(theme.primary) },
+    uSweepX: { value: 0 },
+    uSweep: { value: 0 },
+    uSweepColor: { value: new THREE.Color(theme.primary) },
   };
 
   const tuned = new Map<THREE.Material, THREE.Material>();
@@ -233,12 +255,14 @@ function prepareCar(source: THREE.Object3D) {
 
 type PreparedCar = ReturnType<typeof prepareCar>;
 
-/** Per-frame update: bonnet see-through and wheel spin. */
+/** Per-frame update: bonnet see-through, light sweep and wheel spin. */
 function updateCar(car: PreparedCar, progress: number, reduced: boolean) {
   const { root, uniforms, wheels } = car;
 
   uniforms.uSceneInverse.value.copy(root.matrixWorld).invert();
   uniforms.uXray.value = engineReveal(progress, reduced);
+  uniforms.uSweepX.value = sweepX(progress);
+  uniforms.uSweep.value = sweepStrength(progress, reduced);
 
   const angle = reduced ? 0 : -progress * WHEEL_SPIN_TURNS * Math.PI * 2;
   for (const { node, rest } of wheels) {
@@ -253,7 +277,8 @@ function updateCar(car: PreparedCar, progress: number, reduced: boolean) {
  * The real car: loads car.glb, centres and grounds it, applies the realism
  * material pass (gloss black clearcoat paint, dark glass, rubber tyres),
  * spins the wheels with scroll, rings the front brake disc during "wheels",
- * and turns the bonnet see-through over the engine bay during "engine".
+ * turns the bonnet see-through over the engine bay during "engine", and
+ * runs a soft light sweep along the body during "diagnostics".
  */
 export default function CarModel() {
   const { scene } = useGLTF(MODEL_URL, DRACO_PATH);
@@ -274,6 +299,7 @@ export default function CarModel() {
         <primitive object={car.root} />
         <EngineBay />
         <BrakeDiscHighlight />
+        <SweepLight />
       </group>
     </group>
   );
@@ -324,5 +350,32 @@ function BrakeDiscHighlight() {
         />
       </mesh>
     </group>
+  );
+}
+
+/**
+ * The real light that travels with the diagnostics sweep, so the glossy
+ * paint, glass and wheels catch a moving reflection as well as the glow.
+ * Always present (at zero brightness when idle): adding or removing a
+ * light mid-scroll would make three.js rebuild every shader.
+ */
+function SweepLight() {
+  const lightRef = useRef<THREE.PointLight>(null!);
+  const reducedMotion = useReducedMotion();
+
+  useFrame(() => {
+    const progress = scrollState.progress;
+    lightRef.current.position.set(sweepX(progress), SWEEP_LIGHT_HEIGHT, SWEEP_LIGHT_SIDE_Z);
+    lightRef.current.intensity = 5 * sweepStrength(progress, reducedMotion.current);
+  });
+
+  return (
+    <pointLight
+      ref={lightRef}
+      color={theme.rimLight}
+      intensity={0}
+      distance={4}
+      decay={2}
+    />
   );
 }

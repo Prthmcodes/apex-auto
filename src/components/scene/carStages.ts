@@ -30,3 +30,23 @@ export function checkHighlight(progress: number, index: number, count: number) {
   const distance = Math.abs(t - centre) / (slot * 0.75);
   return THREE.MathUtils.smoothstep(1 - distance, 0, 1);
 }
+
+// The diagnostics light sweep travels from the front bumper to the rear
+// bumper (the model's own X axis) over the middle of the "diagnostics"
+// stage, once the camera has settled on its side-on shot.
+const SWEEP_FRONT_X = 2.6;
+const SWEEP_REAR_X = -2.5;
+const SWEEP_START = DIAGNOSTICS_RANGE[0] + 0.03;
+const SWEEP_END = DIAGNOSTICS_RANGE[1] - 0.02;
+
+/** Where the sweep is along the car (model-space X), for a scroll position. */
+export function sweepX(progress: number) {
+  const t = THREE.MathUtils.clamp((progress - SWEEP_START) / (SWEEP_END - SWEEP_START), 0, 1);
+  return THREE.MathUtils.lerp(SWEEP_FRONT_X, SWEEP_REAR_X, t);
+}
+
+/** 0 to 1: how bright the sweep is. Off entirely under reduced motion. */
+export function sweepStrength(progress: number, reducedMotion: boolean) {
+  if (reducedMotion) return 0;
+  return bandOpacity(progress, [SWEEP_START, SWEEP_END], 0.03);
+}
