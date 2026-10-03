@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Instance, Instances } from "@react-three/drei";
+import { useMemo } from "react";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { theme } from "./theme";
 import { layout } from "./layout";
 import { isLowEndDevice } from "@/lib/deviceQuality";
@@ -145,302 +145,312 @@ const material = {
 
 // ---------------------------------------------------------------------------
 
-/** Pegboard with a row of hanging tool silhouettes. */
-function Pegboard({ detailed }: { detailed: boolean }) {
-  const hooks = useMemo(
-    () =>
-      [-1.0, -0.72, -0.44, -0.12, 0.2, 0.52, 0.84].map((z, i) => ({
-        z,
-        length: 0.8 + ((i * 37) % 5) * 0.1,
-        drop: ((i * 53) % 4) * 0.04,
-      })),
-    []
-  );
 
-  return (
-    <group position={[LEFT + 0.02, 2.0, -4.6]}>
-      <mesh geometry={geometry.panel} material={material.pegboard} />
-      {detailed ? (
-        <Instances geometry={geometry.hangingTool} material={material.frameSteel} limit={12}>
-          {hooks.map((hook, i) => (
-            <Instance
-              key={i}
-              position={[0.05, 0.25 - hook.drop, hook.z]}
-              scale={[1, hook.length, 1]}
-              rotation={[((i % 3) - 1) * 0.08, 0, 0]}
-            />
-          ))}
-        </Instances>
-      ) : null}
-    </group>
-  );
+// ---------------------------------------------------------------------------
+// Building the props.
+//
+// These are laid out as a plain three.js tree rather than as JSX, so that
+// once it's built every mesh sharing a material can be baked into a single
+// merged mesh (see mergeByMaterial below). The dressing is completely
+// static — nothing here moves, ever — so there is no reason to pay for a
+// hundred separate draw calls every frame.
+
+type Place = {
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  scale?: [number, number, number] | number;
+};
+
+/** Adds one mesh to `parent`, in the same shape as the JSX it replaced. */
+function add(
+  parent: THREE.Object3D,
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material,
+  place: Place = {}
+) {
+  const mesh = new THREE.Mesh(geometry, material);
+  if (place.position) mesh.position.fromArray(place.position);
+  if (place.rotation) mesh.rotation.fromArray(place.rotation);
+  if (typeof place.scale === "number") mesh.scale.setScalar(place.scale);
+  else if (place.scale) mesh.scale.fromArray(place.scale);
+  parent.add(mesh);
+  return mesh;
 }
 
-/** Workbench with a vice, a couple of parts and a clip-on work lamp. */
-function Workbench({ detailed }: { detailed: boolean }) {
+/** A child group, for things that are easier to place as a unit. */
+function group(parent: THREE.Object3D, place: Place = {}) {
+  const node = new THREE.Group();
+  if (place.position) node.position.fromArray(place.position);
+  if (place.rotation) node.rotation.fromArray(place.rotation);
+  if (typeof place.scale === "number") node.scale.setScalar(place.scale);
+  else if (place.scale) node.scale.fromArray(place.scale);
+  parent.add(node);
+  return node;
+}
+
+function buildPegboard(root: THREE.Object3D, detailed: boolean) {
+  const g = group(root, { position: [LEFT + 0.02, 2.0, -4.6] });
+  add(g, geometry.panel, material.pegboard);
+  if (!detailed) return;
+  [-1.0, -0.72, -0.44, -0.12, 0.2, 0.52, 0.84].forEach((z, i) => {
+    add(g, geometry.hangingTool, material.frameSteel, {
+      position: [0.05, 0.25 - ((i * 53) % 4) * 0.04, z],
+      scale: [1, 0.8 + ((i * 37) % 5) * 0.1, 1],
+      rotation: [((i % 3) - 1) * 0.08, 0, 0],
+    });
+  });
+}
+
+function buildWorkbench(root: THREE.Object3D, detailed: boolean) {
   const topY = 0.89;
-  return (
-    <group position={[LEFT + 0.4, 0, -4.6]}>
-      <mesh geometry={geometry.benchTop} material={material.bench} position={[0, topY, 0]} />
-      <mesh geometry={geometry.benchShelf} material={material.frameSteel} position={[0, 0.26, 0]} />
-      {[
-        [-0.28, -0.95], [0.28, -0.95], [-0.28, 0.95], [0.28, 0.95],
-      ].map(([x, z], i) => (
-        <mesh key={i} geometry={geometry.benchLeg} material={material.frameSteel} position={[x, 0.43, z]} />
-      ))}
-
-      {/* vice, bolted to the near end of the top */}
-      <group position={[0.06, topY + 0.07, -0.72]}>
-        <mesh geometry={geometry.viceBody} material={material.frameSteel} />
-        <mesh geometry={geometry.viceJaw} material={material.steel} position={[0.1, 0.01, 0]} />
-        <mesh geometry={geometry.viceScrew} material={material.steel} position={[0.2, 0.01, 0]} />
-      </group>
-
-      {detailed ? (
-        <>
-          {/* a few parts left out on the bench */}
-          <mesh geometry={geometry.standSaddle} material={material.steel} position={[-0.05, topY + 0.05, 0.3]} rotation={[0, 0.4, 0]} />
-          <mesh geometry={geometry.viceJaw} material={material.frameSteel} position={[0.1, topY + 0.08, 0.62]} rotation={[0, 0, 0.3]} />
-          {/* clip-on work lamp, lit but not an actual light source */}
-          <group position={[-0.2, topY, 0.95]}>
-            <mesh geometry={geometry.lampArm} material={material.frameSteel} position={[0, 0.25, 0]} rotation={[0.25, 0, 0.2]} />
-            <mesh geometry={geometry.lampShade} material={material.lampShade} position={[0.1, 0.49, 0.12]} rotation={[Math.PI - 0.5, 0, -0.3]} />
-            <mesh geometry={geometry.lampBulb} material={material.lit} position={[0.1, 0.45, 0.12]} />
-          </group>
-        </>
-      ) : null}
-    </group>
+  const g = group(root, { position: [LEFT + 0.4, 0, -4.6] });
+  add(g, geometry.benchTop, material.bench, { position: [0, topY, 0] });
+  add(g, geometry.benchShelf, material.frameSteel, { position: [0, 0.26, 0] });
+  ([[-0.28, -0.95], [0.28, -0.95], [-0.28, 0.95], [0.28, 0.95]] as const).forEach(([x, z]) =>
+    add(g, geometry.benchLeg, material.frameSteel, { position: [x, 0.43, z] })
   );
+
+  const vice = group(g, { position: [0.06, topY + 0.07, -0.72] });
+  add(vice, geometry.viceBody, material.frameSteel);
+  add(vice, geometry.viceJaw, material.steel, { position: [0.1, 0.01, 0] });
+  add(vice, geometry.viceScrew, material.steel, { position: [0.2, 0.01, 0] });
+
+  if (!detailed) return;
+  add(g, geometry.standSaddle, material.steel, {
+    position: [-0.05, topY + 0.05, 0.3],
+    rotation: [0, 0.4, 0],
+  });
+  add(g, geometry.viceJaw, material.frameSteel, {
+    position: [0.1, topY + 0.08, 0.62],
+    rotation: [0, 0, 0.3],
+  });
+
+  const lamp = group(g, { position: [-0.2, topY, 0.95] });
+  add(lamp, geometry.lampArm, material.frameSteel, {
+    position: [0, 0.25, 0],
+    rotation: [0.25, 0, 0.2],
+  });
+  add(lamp, geometry.lampShade, material.lampShade, {
+    position: [0.1, 0.49, 0.12],
+    rotation: [Math.PI - 0.5, 0, -0.3],
+  });
+  add(lamp, geometry.lampBulb, material.lit, { position: [0.1, 0.45, 0.12] });
 }
 
-/** A stack of tyres and a simple rack against the back-left. */
-function Tyres() {
-  return (
-    <>
-      <Instances geometry={geometry.tyre} material={material.rubber} limit={8}>
-        {[0, 1, 2, 3].map((i) => (
-          <Instance
-            key={i}
-            position={[LEFT + 0.55, 0.11 + i * 0.2, -7.0]}
-            rotation={[Math.PI / 2, 0, i * 0.5]}
-          />
-        ))}
-        {[0, 1].map((i) => (
-          <Instance
-            key={`rack-${i}`}
-            position={[LEFT + 0.5, 1.12, BACK + 0.55 + i * 0.75]}
-            rotation={[Math.PI / 2, 0, i * 0.9]}
-          />
-        ))}
-      </Instances>
+function buildTyres(root: THREE.Object3D) {
+  for (let i = 0; i < 4; i += 1) {
+    add(root, geometry.tyre, material.rubber, {
+      position: [LEFT + 0.55, 0.11 + i * 0.2, -7.0],
+      rotation: [Math.PI / 2, 0, i * 0.5],
+    });
+  }
+  for (let i = 0; i < 2; i += 1) {
+    add(root, geometry.tyre, material.rubber, {
+      position: [LEFT + 0.5, 1.12, BACK + 0.55 + i * 0.75],
+      rotation: [Math.PI / 2, 0, i * 0.9],
+    });
+  }
 
-      {/* the rack itself */}
-      <group position={[LEFT + 0.45, 0, BACK + 0.9]}>
-        {[-0.75, 0.75].map((z) => (
-          <mesh key={z} geometry={geometry.rackUpright} material={material.frameSteel} position={[0, 0.95, z]} />
-        ))}
-        <mesh geometry={geometry.rackBar} material={material.frameSteel} position={[0, 0.78, 0]} />
-        <mesh geometry={geometry.rackBar} material={material.frameSteel} position={[0, 1.5, 0]} />
-      </group>
-    </>
+  const rack = group(root, { position: [LEFT + 0.45, 0, BACK + 0.9] });
+  [-0.75, 0.75].forEach((z) =>
+    add(rack, geometry.rackUpright, material.frameSteel, { position: [0, 0.95, z] })
   );
+  add(rack, geometry.rackBar, material.frameSteel, { position: [0, 0.78, 0] });
+  add(rack, geometry.rackBar, material.frameSteel, { position: [0, 1.5, 0] });
 }
 
-/** Oil drums, one with a faded (wordless) label band. */
-function Drums() {
-  return (
-    <group position={[LEFT + 0.42, 0, -9.3]}>
-      <mesh geometry={geometry.drum} material={material.drumBlue} position={[0, 0.43, 0]} />
-      <mesh geometry={geometry.drumRib} material={material.drumBlue} position={[0, 0.58, 0]} />
-      <mesh geometry={geometry.drumRib} material={material.drumBlue} position={[0, 0.28, 0]} />
-
-      <mesh geometry={geometry.drum} material={material.drumRed} position={[0.1, 0.43, 0.68]} />
-      <mesh geometry={geometry.drumLabel} material={material.drumLabel} position={[0.1, 0.46, 0.68]} />
-      <mesh geometry={geometry.drumRib} material={material.drumRed} position={[0.1, 0.72, 0.68]} />
-    </group>
-  );
+function buildDrums(root: THREE.Object3D) {
+  const g = group(root, { position: [LEFT + 0.42, 0, -9.3] });
+  add(g, geometry.drum, material.drumBlue, { position: [0, 0.43, 0] });
+  add(g, geometry.drumRib, material.drumBlue, { position: [0, 0.58, 0] });
+  add(g, geometry.drumRib, material.drumBlue, { position: [0, 0.28, 0] });
+  add(g, geometry.drum, material.drumRed, { position: [0.1, 0.43, 0.68] });
+  add(g, geometry.drumLabel, material.drumLabel, { position: [0.1, 0.46, 0.68] });
+  add(g, geometry.drumRib, material.drumRed, { position: [0.1, 0.72, 0.68] });
 }
 
-/** Trolley jack and a pair of axle stands, parked to the left of the car. */
-function JackAndStands({ detailed }: { detailed: boolean }) {
-  return (
-    <group position={[-2.75, 0, -5.3]} rotation={[0, 0.35, 0]}>
-      <mesh geometry={geometry.jackBody} material={material.red} position={[0, 0.17, 0]} />
-      <mesh geometry={geometry.jackArm} material={material.frameSteel} position={[0.08, 0.27, 0]} rotation={[0, 0, 0.12]} />
-      <mesh geometry={geometry.jackHandle} material={material.frameSteel} position={[-0.5, 0.42, 0]} rotation={[0, 0, 1.15]} />
-      {[[-0.3, -0.13], [-0.3, 0.13], [0.3, -0.13], [0.3, 0.13]].map(([x, z], i) => (
-        <mesh key={i} geometry={geometry.jackWheel} material={material.rubber} position={[x, 0.05, z]} />
-      ))}
-
-      {detailed
-        ? [0.75, 1.15].map((x, i) => (
-            <group key={i} position={[x, 0, 0.5 + i * 0.1]}>
-              <mesh geometry={geometry.standPost} material={material.steel} position={[0, 0.34, 0]} />
-              <mesh geometry={geometry.standSaddle} material={material.steel} position={[0, 0.5, 0]} />
-              {[0, 1, 2].map((leg) => (
-                <mesh
-                  key={leg}
-                  geometry={geometry.standLeg}
-                  material={material.frameSteel}
-                  position={[
-                    Math.cos((leg / 3) * Math.PI * 2) * 0.1,
-                    0.2,
-                    Math.sin((leg / 3) * Math.PI * 2) * 0.1,
-                  ]}
-                  rotation={[
-                    Math.sin((leg / 3) * Math.PI * 2) * 0.28,
-                    0,
-                    -Math.cos((leg / 3) * Math.PI * 2) * 0.28,
-                  ]}
-                />
-              ))}
-            </group>
-          ))
-        : null}
-    </group>
+function buildJackAndStands(root: THREE.Object3D, detailed: boolean) {
+  const g = group(root, { position: [-2.75, 0, -5.3], rotation: [0, 0.35, 0] });
+  add(g, geometry.jackBody, material.red, { position: [0, 0.17, 0] });
+  add(g, geometry.jackArm, material.frameSteel, {
+    position: [0.08, 0.27, 0],
+    rotation: [0, 0, 0.12],
+  });
+  add(g, geometry.jackHandle, material.frameSteel, {
+    position: [-0.5, 0.42, 0],
+    rotation: [0, 0, 1.15],
+  });
+  ([[-0.3, -0.13], [-0.3, 0.13], [0.3, -0.13], [0.3, 0.13]] as const).forEach(([x, z]) =>
+    add(g, geometry.jackWheel, material.rubber, { position: [x, 0.05, z] })
   );
+  if (!detailed) return;
+
+  [0.75, 1.15].forEach((x, i) => {
+    const stand = group(g, { position: [x, 0, 0.5 + i * 0.1] });
+    add(stand, geometry.standPost, material.steel, { position: [0, 0.34, 0] });
+    add(stand, geometry.standSaddle, material.steel, { position: [0, 0.5, 0] });
+    for (let leg = 0; leg < 3; leg += 1) {
+      const angle = (leg / 3) * Math.PI * 2;
+      add(stand, geometry.standLeg, material.frameSteel, {
+        position: [Math.cos(angle) * 0.1, 0.2, Math.sin(angle) * 0.1],
+        rotation: [Math.sin(angle) * 0.28, 0, -Math.cos(angle) * 0.28],
+      });
+    }
+  });
 }
 
-/** Two-post lift, standing well back so it frames the bay without blocking it. */
-function LiftPosts() {
-  return (
-    <>
-      {[-1, 1].map((side) => (
-        <group key={side} position={[side * 4.0, 0, -8.2]}>
-          <mesh geometry={geometry.liftBase} material={material.frameSteel} position={[0, 0.04, 0]} />
-          <mesh geometry={geometry.liftPost} material={material.yellow} position={[0, 1.5, 0]} />
-          {/* one arm reaching in toward the bay, parked low */}
-          <mesh
-            geometry={geometry.liftArm}
-            material={material.frameSteel}
-            position={[-side * 0.55, 0.42, 0.3]}
-            rotation={[0, side * 0.5, 0]}
-          />
-        </group>
-      ))}
-    </>
-  );
+function buildLiftPosts(root: THREE.Object3D) {
+  [-1, 1].forEach((side) => {
+    const g = group(root, { position: [side * 4.0, 0, -8.2] });
+    add(g, geometry.liftBase, material.frameSteel, { position: [0, 0.04, 0] });
+    add(g, geometry.liftPost, material.yellow, { position: [0, 1.5, 0] });
+    add(g, geometry.liftArm, material.frameSteel, {
+      position: [-side * 0.55, 0.42, 0.3],
+      rotation: [0, side * 0.5, 0],
+    });
+  });
 }
 
-/** Extra ceiling strip fittings, matching the two WorkshopLights already has. */
-function CeilingStrips() {
+function buildCeilingStrips(root: THREE.Object3D) {
   const y = garageHeight - 0.12;
-  return (
-    <>
-      {[-3.4, -9.4].map((z) => (
-        <group key={z} position={[0, y, z]}>
-          {[-0.75, 0.75].map((x) => (
-            <group key={x} position={[x, 0, 0]}>
-              <mesh geometry={geometry.stripHousing} material={material.frameSteel} />
-              <mesh geometry={geometry.stripTube} material={material.lit} position={[0, -0.04, 0]} />
-            </group>
-          ))}
-        </group>
-      ))}
-    </>
-  );
+  [-3.4, -9.4].forEach((z) => {
+    [-0.75, 0.75].forEach((x) => {
+      const g = group(root, { position: [x, y, z] });
+      add(g, geometry.stripHousing, material.frameSteel);
+      add(g, geometry.stripTube, material.lit, { position: [0, -0.04, 0] });
+    });
+  });
 }
 
-/** Flat-to-the-wall details on the right, kept clear of the camera's line. */
-function RightWallDetails({ detailed }: { detailed: boolean }) {
-  return (
-    <group position={[RIGHT - 0.02, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-      {/* cable reel and coiled air hose, up out of the way */}
-      <group position={[-5.5, 2.5, 0]}>
-        <mesh geometry={geometry.reelCheek} material={material.red} position={[0, 0, 0.09]} />
-        <mesh geometry={geometry.reelDrum} material={material.frameSteel} />
-        <mesh geometry={geometry.reelCheek} material={material.red} position={[0, 0, -0.09]} />
-        <mesh geometry={geometry.hoseCoil} material={material.dark} rotation={[0, Math.PI / 2, 0]} />
-      </group>
+function buildRightWallDetails(root: THREE.Object3D, detailed: boolean) {
+  const wall = group(root, { position: [RIGHT - 0.02, 0, 0], rotation: [0, -Math.PI / 2, 0] });
 
-      {detailed ? (
-        <>
-          {/* fire extinguisher on its bracket */}
-          <group position={[-3.2, 1.0, 0]}>
-            <mesh geometry={geometry.extBracket} material={material.dark} position={[0, 0, 0.06]} />
-            <mesh geometry={geometry.extBody} material={material.red} />
-            <mesh geometry={geometry.extNeck} material={material.dark} position={[0, 0.24, 0]} />
-          </group>
-          {/* clock */}
-          <mesh geometry={geometry.clockFace} material={material.paper} position={[-8.0, 2.8, 0]} rotation={[0, 0, Math.PI / 2]} />
-          {/* a framed poster */}
-          <group position={[-9.3, 2.1, 0]}>
-            <mesh geometry={geometry.frame} material={material.dark} rotation={[0, Math.PI / 2, 0]} />
-            <mesh geometry={geometry.framePaper} material={material.paper} position={[0, 0, 0.02]} />
-          </group>
-        </>
-      ) : null}
-    </group>
-  );
+  const reel = group(wall, { position: [-5.5, 2.5, 0] });
+  add(reel, geometry.reelCheek, material.red, { position: [0, 0, 0.09] });
+  add(reel, geometry.reelDrum, material.frameSteel);
+  add(reel, geometry.reelCheek, material.red, { position: [0, 0, -0.09] });
+  add(reel, geometry.hoseCoil, material.dark, { rotation: [0, Math.PI / 2, 0] });
+
+  if (!detailed) return;
+  const ext = group(wall, { position: [-3.2, 1.0, 0] });
+  add(ext, geometry.extBracket, material.dark, { position: [0, 0, 0.06] });
+  add(ext, geometry.extBody, material.red);
+  add(ext, geometry.extNeck, material.dark, { position: [0, 0.24, 0] });
+
+  add(wall, geometry.clockFace, material.paper, {
+    position: [-8.0, 2.8, 0],
+    rotation: [0, 0, Math.PI / 2],
+  });
+
+  const poster = group(wall, { position: [-9.3, 2.1, 0] });
+  add(poster, geometry.frame, material.dark, { rotation: [0, Math.PI / 2, 0] });
+  add(poster, geometry.framePaper, material.paper, { position: [0, 0, 0.02] });
 }
 
-/** Yellow/black bay markings, oil stains and a drip tray. */
-function FloorDetails({ detailed }: { detailed: boolean }) {
+function buildFloorDetails(root: THREE.Object3D, detailed: boolean) {
   const y = 0.006;
-  return (
-    <group>
-      {/* hazard hatching down the left edge of the bay */}
-      <Instances geometry={geometry.floorStripe} material={material.yellow} limit={28}>
-        {Array.from({ length: 14 }).map((_, i) => (
-          <Instance
-            key={i}
-            position={[-2.25, y, -4.0 - i * 0.42]}
-            rotation={[0, 0.6, 0]}
-            scale={[1, 1, 0.52]}
-          />
-        ))}
-      </Instances>
+  for (let i = 0; i < 14; i += 1) {
+    add(root, geometry.floorStripe, material.yellow, {
+      position: [-2.25, y, -4.0 - i * 0.42],
+      rotation: [0, 0.6, 0],
+      scale: [1, 1, 0.52],
+    });
+  }
+  add(root, geometry.floorStripe, material.yellow, {
+    position: [2.25, y, -6.4],
+    scale: [0.7, 1, 5.2],
+  });
 
-      {/* a plain bay outline on the other side, so the car reads as parked
-          in a marked-out service bay rather than anywhere on the floor */}
-      <mesh geometry={geometry.floorStripe} material={material.yellow} position={[2.25, y, -6.4]} scale={[0.7, 1, 5.2]} />
+  if (!detailed) return;
+  add(root, geometry.stain, material.oil, {
+    position: [-2.9, y - 0.001, -6.6],
+    scale: [0.5, 1, 0.34],
+  });
+  add(root, geometry.stain, material.oil, {
+    position: [-3.4, y - 0.001, -5.5],
+    scale: [0.26, 1, 0.3],
+  });
+  add(root, geometry.stain, material.oil, {
+    position: [3.2, y - 0.001, -8.6],
+    scale: [0.33, 1, 0.26],
+  });
 
-      {detailed ? (
-        <>
-          {/* old oil stains, kept off to the side of the car */}
-          <mesh geometry={geometry.stain} material={material.oil} position={[-2.9, y - 0.001, -6.6]} scale={[0.5, 1, 0.34]} />
-          <mesh geometry={geometry.stain} material={material.oil} position={[-3.4, y - 0.001, -5.5]} scale={[0.26, 1, 0.3]} />
-          <mesh geometry={geometry.stain} material={material.oil} position={[3.2, y - 0.001, -8.6]} scale={[0.33, 1, 0.26]} />
-          {/* drip tray */}
-          <group position={[-2.1, 0, -7.4]} rotation={[0, 0.2, 0]}>
-            <mesh geometry={geometry.trayBase} material={material.dark} position={[0, 0.012, 0]} />
-            <mesh geometry={geometry.stain} material={material.oil} position={[0, 0.027, 0]} scale={[0.18, 1, 0.13]} />
-          </group>
-        </>
-      ) : null}
-    </group>
-  );
+  const tray = group(root, { position: [-2.1, 0, -7.4], rotation: [0, 0.2, 0] });
+  add(tray, geometry.trayBase, material.dark, { position: [0, 0.012, 0] });
+  add(tray, geometry.stain, material.oil, { position: [0, 0.027, 0], scale: [0.18, 1, 0.13] });
 }
 
-/** A small service-bay sign on the back wall, in the brand accent. */
-function WorkshopSign() {
-  return (
-    <group position={[-2.6, 2.6, BACK + 0.06]}>
-      <mesh geometry={geometry.signPlate} material={material.dark} />
-      <mesh geometry={geometry.signPlate} material={material.accent} scale={[0.92, 0.42, 0.9]} position={[0, 0, 0.012]} />
-    </group>
-  );
+function buildSign(root: THREE.Object3D) {
+  const g = group(root, { position: [-2.6, 2.6, BACK + 0.06] });
+  add(g, geometry.signPlate, material.dark);
+  add(g, geometry.signPlate, material.accent, {
+    scale: [0.92, 0.42, 0.9],
+    position: [0, 0, 0.012],
+  });
 }
 
-/** A faint wash of grime along the bottom of the side walls. */
-function WallGrime() {
-  return (
-    <>
-      {[
-        { x: LEFT + 0.015, rotation: Math.PI / 2 },
-        { x: RIGHT - 0.015, rotation: -Math.PI / 2 },
-      ].map(({ x, rotation }) => (
-        <mesh
-          key={x}
-          geometry={geometry.grime}
-          material={material.grime}
-          position={[x, 0.42, (frontZ + backZ) / 2]}
-          rotation={[0, rotation, 0]}
-          scale={[8.6, 0.85, 1]}
-        />
-      ))}
-    </>
-  );
+function buildWallGrime(root: THREE.Object3D) {
+  add(root, geometry.grime, material.grime, {
+    position: [LEFT + 0.015, 0.42, (frontZ + backZ) / 2],
+    rotation: [0, Math.PI / 2, 0],
+    scale: [8.6, 0.85, 1],
+  });
+  add(root, geometry.grime, material.grime, {
+    position: [RIGHT - 0.015, 0.42, (frontZ + backZ) / 2],
+    rotation: [0, -Math.PI / 2, 0],
+    scale: [8.6, 0.85, 1],
+  });
+}
+
+/**
+ * Bakes a tree of static meshes down to one merged mesh per material.
+ *
+ * Each mesh's geometry is cloned, its full world transform baked into the
+ * vertices, and everything sharing a material welded into a single
+ * buffer. A hundred-odd little props become about a dozen draw calls.
+ *
+ * This matters far more here than the triangle count ever did: the props
+ * are only ~5,800 triangles, barely 1% of the car's, but as separate
+ * meshes they were a hundred extra draw calls on every frame — and
+ * per-draw cost is exactly what dominates when there's no GPU and the
+ * browser is rasterising on the CPU, as in the headless QA runs.
+ */
+function mergeByMaterial(root: THREE.Object3D) {
+  root.updateWorldMatrix(true, true);
+
+  const byMaterial = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  root.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    const baked = child.geometry.clone().applyMatrix4(child.matrixWorld);
+    // Merging needs every geometry to carry exactly the same attributes.
+    for (const name of Object.keys(baked.attributes)) {
+      if (name !== "position" && name !== "normal" && name !== "uv") {
+        baked.deleteAttribute(name);
+      }
+    }
+    const list = byMaterial.get(child.material as THREE.Material);
+    if (list) list.push(baked);
+    else byMaterial.set(child.material as THREE.Material, [baked]);
+  });
+
+  const merged = new THREE.Group();
+  merged.name = "workshop props (merged)";
+  for (const [mat, geometries] of byMaterial) {
+    const combined = mergeGeometries(geometries, false);
+    for (const geo of geometries) geo.dispose();
+    if (!combined) continue;
+    const mesh = new THREE.Mesh(combined, mat);
+    // Static dressing: it never moves, so three.js can skip its matrix work.
+    mesh.matrixAutoUpdate = false;
+    // Neither casting nor receiving shadows. These are background objects
+    // lit mostly by the warm point lights, and shadow sampling is a
+    // per-pixel cost across a lot of screen for something nobody looks at.
+    // The car and the room it stands in still cast and receive normally.
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    merged.add(mesh);
+  }
+  return merged;
 }
 
 /**
@@ -455,23 +465,24 @@ function WallGrime() {
  * reads up close is dropped.
  */
 export default function WorkshopProps() {
-  // Settled once on mount: this only ever runs in the browser (the whole
-  // scene is loaded with ssr:false), and the answer can't change mid-session.
-  const [detailed] = useState(() => !isLowEndDevice());
+  const props = useMemo(() => {
+    // Settled once: this only ever runs in the browser (the whole scene is
+    // loaded with ssr:false) and the answer can't change mid-session.
+    const detailed = !isLowEndDevice();
+    const root = new THREE.Group();
+    buildPegboard(root, detailed);
+    buildWorkbench(root, detailed);
+    buildTyres(root);
+    buildDrums(root);
+    buildJackAndStands(root, detailed);
+    buildLiftPosts(root);
+    buildCeilingStrips(root);
+    buildRightWallDetails(root, detailed);
+    buildFloorDetails(root, detailed);
+    buildSign(root);
+    buildWallGrime(root);
+    return mergeByMaterial(root);
+  }, []);
 
-  return (
-    <group>
-      <Pegboard detailed={detailed} />
-      <Workbench detailed={detailed} />
-      <Tyres />
-      <Drums />
-      <JackAndStands detailed={detailed} />
-      <LiftPosts />
-      <CeilingStrips />
-      <RightWallDetails detailed={detailed} />
-      <FloorDetails detailed={detailed} />
-      <WorkshopSign />
-      <WallGrime />
-    </group>
-  );
+  return <primitive object={props} />;
 }
