@@ -36,12 +36,19 @@ function useAsphalt() {
   return maps;
 }
 
-/** A couple of faded parking-bay line markings in front of the garage door. */
+/**
+ * A couple of faded parking-bay markings out on the tarmac.
+ *
+ * They used to run from z = 2 to z = 18 at x = +/-2.6, which put one of
+ * them directly under the opening camera and the other straight through
+ * the concrete apron. Moved out and apart: they now start beyond the apron
+ * and flank the approach instead of running down the middle of it.
+ */
 function LineMarkings() {
   const lines = useMemo(
     () => [
-      { position: [-2.6, 0.006, 10] as const, size: [0.12, 0.01, 16] as const },
-      { position: [2.6, 0.006, 10] as const, size: [0.12, 0.01, 16] as const },
+      { position: [-3.6, 0.006, 13] as const, size: [0.12, 0.01, 15] as const },
+      { position: [5.9, 0.006, 13] as const, size: [0.12, 0.01, 15] as const },
     ],
     []
   );
@@ -80,7 +87,7 @@ export default function Ground() {
           normalMap={asphalt.normalMap}
           normalScale={NORMAL_SCALE}
           roughnessMap={asphalt.roughnessMap}
-          roughness={0.82}
+          roughness={0.74}
           metalness={0}
         />
       </mesh>

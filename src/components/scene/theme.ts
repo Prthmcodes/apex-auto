@@ -40,6 +40,37 @@ const MATERIALS = {
   safetyYellow: "#c9a227",
   wallGrime: "#2a2b28",
   lampShade: "#43464c",
+
+  // The outside of the building and the forecourt. A real independent
+  // garage is a cheap industrial unit: profiled metal cladding over
+  // blockwork, galvanised trim, and everything a few years weathered.
+  // Deliberately all greys — the brand accent appears on the sign only, so
+  // the sign is the one thing on the building that catches the eye.
+  cladding: "#363b41",
+  claddingRib: "#272b31",
+  blockwork: "#5c6061",
+  blockMortar: "#4c5052",
+  roofTrim: "#7e848b",
+  drainpipe: "#3a3e43",
+  shutterSlat: "#767b82",
+  shutterSlatDark: "#585d64",
+  // The closed bay's shutter: same thing, duller and grubbier, so the two
+  // bays don't look like copies of each other.
+  shutterClosed: "#5f646a",
+  personnelDoor: "#38424a",
+  fasciaPanel: "#121620",
+  fasciaSurround: "#20242b",
+  // A generic trade-sign blue. Not sampled from any official MOT signage.
+  motSignBlue: "#1a3f8c",
+  motSignText: "#eef2f7",
+  floodHousing: "#2b2e33",
+  floodLens: "#ffe6bd",
+  apron: "#404446",
+  fenceSteel: "#2d3136",
+  // Neighbouring units: near-background silhouettes, not buildings. They
+  // exist so the garage isn't floating in a void.
+  neighbourUnit: "#0b0e15",
+  lampPost: "#2a2e33",
 };
 
 const TEAL = {
@@ -54,6 +85,13 @@ const TEAL = {
   ambientSky: "#2b3a55",
   ambientGround: "#05060a",
   ambientSun: "#9db4d8",
+  // The dusk sky behind the building. `skyHorizon` deliberately sits close
+  // to `fog.color`, because the distant ground fades to exactly that — if
+  // the two disagree you get a hard line across the horizon. `cityGlow` is
+  // the faint warm smudge of a town just out of sight.
+  skyTop: "#070c16",
+  skyHorizon: "#1e2a3c",
+  cityGlow: "#55492f",
   ...MATERIALS,
 };
 
@@ -69,6 +107,9 @@ const AMBER_RED = {
   ambientSky: "#4a2a1a",
   ambientGround: "#0a0503",
   ambientSun: "#d99a66",
+  skyTop: "#0d0806",
+  skyHorizon: "#331d11",
+  cityGlow: "#5e3722",
   ...MATERIALS,
 };
 
@@ -84,6 +125,9 @@ const ICE_BLUE = {
   ambientSky: "#2d4a6b",
   ambientGround: "#05080f",
   ambientSun: "#bfe6ff",
+  skyTop: "#070d18",
+  skyHorizon: "#223450",
+  cityGlow: "#3d5570",
   ...MATERIALS,
 };
 

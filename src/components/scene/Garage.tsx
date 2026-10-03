@@ -97,35 +97,6 @@ function WorkshopFloor() {
   );
 }
 
-/** A handful of slat ridges on the lintel, standing in for a rolled-up roller door. */
-function RollerSlats() {
-  const slatCount = 5;
-  const bandHeight = height - door.height;
-  const slatHeight = bandHeight / slatCount;
-
-  return (
-    <>
-      {Array.from({ length: slatCount }).map((_, i) => (
-        <mesh
-          key={i}
-          position={[
-            0,
-            door.height + slatHeight * (i + 0.5),
-            frontZ + wallThickness / 2 + 0.01,
-          ]}
-        >
-          <boxGeometry args={[door.width - 0.05, slatHeight - 0.03, 0.04]} />
-          <meshStandardMaterial
-            color={i % 2 === 0 ? "#8a8d93" : "#6e7177"}
-            roughness={0.5}
-            metalness={0.6}
-          />
-        </mesh>
-      ))}
-    </>
-  );
-}
-
 /**
  * The frosted pane itself, drawn in code as a small gradient image.
  *
@@ -334,10 +305,9 @@ export default function Garage() {
         <boxGeometry args={[door.width, height - door.height, wallThickness]} />
         <meshStandardMaterial {...concreteProps} />
       </mesh>
-      <RollerSlats />
 
-      {/* warm amber strip light glowing from just inside the doorway */}
-      <mesh position={[0, door.height - 0.1, frontZ + 0.4]}>
+      {/* warm amber strip light on the inside of the lintel */}
+      <mesh position={[0, door.height - 0.15, frontZ - 0.5]}>
         <boxGeometry args={[door.width - 0.3, 0.1, 0.1]} />
         <meshStandardMaterial
           color={theme.accent}
@@ -347,12 +317,15 @@ export default function Garage() {
         />
       </mesh>
 
-      {/* amber light spilling out of the garage onto the forecourt */}
+      {/* Amber light spilling out of the open bay onto the forecourt. Low
+          and just outside the opening, so it comes out UNDER the
+          two-thirds-open shutter and lands on the apron, rather than
+          lighting the outside face of the curtain. */}
       <pointLight
-        position={[0, door.height - 0.6, frontZ + 1.5]}
+        position={[0, 1.7, frontZ + 1.0]}
         color={theme.accent}
-        intensity={6}
-        distance={13}
+        intensity={7}
+        distance={12}
         decay={2}
       />
     </group>

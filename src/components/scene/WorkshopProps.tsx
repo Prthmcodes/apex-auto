@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import * as THREE from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { add, group, mergeByMaterial } from "./buildTree";
 import { theme } from "./theme";
 import { layout } from "./layout";
 import { isLowEndDevice } from "@/lib/deviceQuality";
@@ -144,44 +144,10 @@ const material = {
 // ---------------------------------------------------------------------------
 // Building the props.
 //
-// These are laid out as a plain three.js tree rather than as JSX, so that
-// once it's built every mesh sharing a material can be baked into a single
-// merged mesh (see mergeByMaterial below). The dressing is completely
-// static — nothing here moves, ever — so there is no reason to pay for a
-// hundred separate draw calls every frame.
-
-type Place = {
-  position?: [number, number, number];
-  rotation?: [number, number, number];
-  scale?: [number, number, number] | number;
-};
-
-/** Adds one mesh to `parent`, in the same shape as the JSX it replaced. */
-function add(
-  parent: THREE.Object3D,
-  geometry: THREE.BufferGeometry,
-  material: THREE.Material,
-  place: Place = {}
-) {
-  const mesh = new THREE.Mesh(geometry, material);
-  if (place.position) mesh.position.fromArray(place.position);
-  if (place.rotation) mesh.rotation.fromArray(place.rotation);
-  if (typeof place.scale === "number") mesh.scale.setScalar(place.scale);
-  else if (place.scale) mesh.scale.fromArray(place.scale);
-  parent.add(mesh);
-  return mesh;
-}
-
-/** A child group, for things that are easier to place as a unit. */
-function group(parent: THREE.Object3D, place: Place = {}) {
-  const node = new THREE.Group();
-  if (place.position) node.position.fromArray(place.position);
-  if (place.rotation) node.rotation.fromArray(place.rotation);
-  if (typeof place.scale === "number") node.scale.setScalar(place.scale);
-  else if (place.scale) node.scale.fromArray(place.scale);
-  parent.add(node);
-  return node;
-}
+// Laid out as a plain three.js tree rather than as JSX, so that once it's
+// built every mesh sharing a material can be baked into a single merged
+// mesh. See buildTree.ts for `add`, `group` and `mergeByMaterial`, which
+// the exterior uses too.
 
 function buildPegboard(root: THREE.Object3D, detailed: boolean) {
   const g = group(root, { position: [LEFT + 0.02, 2.0, -4.6] });
@@ -453,57 +419,6 @@ function buildWallGrime(root: THREE.Object3D) {
 }
 
 /**
- * Bakes a tree of static meshes down to one merged mesh per material.
- *
- * Each mesh's geometry is cloned, its full world transform baked into the
- * vertices, and everything sharing a material welded into a single
- * buffer. A hundred-odd little props become about a dozen draw calls.
- *
- * This matters far more here than the triangle count ever did: the props
- * are only ~5,800 triangles, barely 1% of the car's, but as separate
- * meshes they were a hundred extra draw calls on every frame — and
- * per-draw cost is exactly what dominates when there's no GPU and the
- * browser is rasterising on the CPU, as in the headless QA runs.
- */
-function mergeByMaterial(root: THREE.Object3D) {
-  root.updateWorldMatrix(true, true);
-
-  const byMaterial = new Map<THREE.Material, THREE.BufferGeometry[]>();
-  root.traverse((child) => {
-    if (!(child instanceof THREE.Mesh)) return;
-    const baked = child.geometry.clone().applyMatrix4(child.matrixWorld);
-    // Merging needs every geometry to carry exactly the same attributes.
-    for (const name of Object.keys(baked.attributes)) {
-      if (name !== "position" && name !== "normal" && name !== "uv") {
-        baked.deleteAttribute(name);
-      }
-    }
-    const list = byMaterial.get(child.material as THREE.Material);
-    if (list) list.push(baked);
-    else byMaterial.set(child.material as THREE.Material, [baked]);
-  });
-
-  const merged = new THREE.Group();
-  merged.name = "workshop props (merged)";
-  for (const [mat, geometries] of byMaterial) {
-    const combined = mergeGeometries(geometries, false);
-    for (const geo of geometries) geo.dispose();
-    if (!combined) continue;
-    const mesh = new THREE.Mesh(combined, mat);
-    // Static dressing: it never moves, so three.js can skip its matrix work.
-    mesh.matrixAutoUpdate = false;
-    // Neither casting nor receiving shadows. These are background objects
-    // lit mostly by the warm point lights, and shadow sampling is a
-    // per-pixel cost across a lot of screen for something nobody looks at.
-    // The car and the room it stands in still cast and receive normally.
-    mesh.castShadow = false;
-    mesh.receiveShadow = false;
-    merged.add(mesh);
-  }
-  return merged;
-}
-
-/**
  * Everything that makes the bay look like a working garage rather than an
  * empty box: pegboard and bench, tyres and a rack, oil drums, a trolley
  * jack and axle stands, two lift posts, extra ceiling strips, a cable
@@ -531,7 +446,7 @@ export default function WorkshopProps() {
     buildFloorDetails(root, detailed);
     buildSign(root);
     buildWallGrime(root);
-    return mergeByMaterial(root);
+    return mergeByMaterial(root, "workshop props (merged)");
   }, []);
 
   return <primitive object={props} />;

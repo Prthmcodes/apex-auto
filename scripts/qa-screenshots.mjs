@@ -41,7 +41,35 @@ const STAGE_CENTRES = siteContent.stages.map((stage, i) =>
 const MIDPOINTS = STAGE_CENTRES.slice(0, -1).map((pct, i) =>
   Math.round((pct + STAGE_CENTRES[i + 1]) / 2)
 );
-const SCROLL_POINTS = [...STAGE_CENTRES, ...MIDPOINTS].sort((a, b) => a - b);
+const ALL_SCROLL_POINTS = [...STAGE_CENTRES, ...MIDPOINTS].sort((a, b) => a - b);
+
+// Narrow the run while iterating on one part of the page:
+//   QA_POINTS=0,10,20,30 npm run qa:screenshots   — just the arrival
+//   QA_SKIP_BOOK=1                                — don't shoot /book
+// A full pass is 11 points x 2 screen sizes plus both /book pages, and on a
+// machine with no GPU the browser rasterises every frame on the CPU, so
+// that is several minutes per pass. Default behaviour is unchanged: no env
+// vars means everything, which is what a final check should always be.
+const SCROLL_POINTS = process.env.QA_POINTS
+  ? process.env.QA_POINTS.split(",").map((value) => Number(value.trim()))
+  : ALL_SCROLL_POINTS;
+const SKIP_BOOK = process.env.QA_SKIP_BOOK === "1";
+
+// By default this run forces prefers-reduced-motion (see below), which
+// makes the camera SNAP to the nearest stage rather than follow the path.
+// That is what you want for repeatable stage shots, but it means the
+// midpoint captures are not midpoints at all: at 30% the rig reports stage
+// 2 and takes the same picture as the 20% shot. QA_MOTION=1 turns the
+// forcing off, so the midpoints show the camera where it really is on the
+// way between two stages — which is the only way to see whether the move
+// into the garage is smooth, or clips something on the way through.
+const WITH_MOTION = process.env.QA_MOTION === "1";
+
+const invalid = SCROLL_POINTS.filter((pct) => !Number.isFinite(pct) || pct < 0 || pct > 100);
+if (invalid.length) {
+  console.error(`QA_POINTS must be percentages between 0 and 100; got: ${invalid.join(", ")}`);
+  process.exit(1);
+}
 
 async function isServerUp(url) {
   try {
@@ -118,7 +146,7 @@ async function main() {
       // within our wait window. This is a screenshot-determinism choice,
       // not a claim that real users see this snap — see the reduced-motion
       // section below for that check instead.
-      await page.emulateMedia({ reducedMotion: "reduce" });
+      if (!WITH_MOTION) await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto(baseUrl, { waitUntil: "load" });
 
       const hasWebGL = await page.evaluate(() => {
@@ -162,7 +190,8 @@ async function main() {
         await page.waitForTimeout(500);
 
         const kind = STAGE_CENTRES.includes(pct) ? "stage" : "mid";
-        const filename = `home-${viewport.name}-${String(pct).padStart(3, "0")}-${kind}.png`;
+        const suffix = WITH_MOTION ? "-motion" : "";
+        const filename = `home-${viewport.name}-${String(pct).padStart(3, "0")}-${kind}${suffix}.png`;
         await page.screenshot({ path: path.join(OUT_DIR, filename) });
         console.log(`Saved ${filename}`);
       }
@@ -170,7 +199,7 @@ async function main() {
       await context.close();
     }
 
-    for (const viewport of VIEWPORTS) {
+    for (const viewport of SKIP_BOOK ? [] : VIEWPORTS) {
       const context = await browser.newContext({
         viewport: { width: viewport.width, height: viewport.height },
       });

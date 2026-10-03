@@ -5,7 +5,8 @@ import Atmosphere from "./Atmosphere";
 import Atmospherics from "./Atmospherics";
 import Ground from "./Ground";
 import Garage from "./Garage";
-import Sign from "./Sign";
+import GarageExterior from "./GarageExterior";
+import Forecourt from "./Forecourt";
 import CarModel from "./CarModel";
 import FloatingTools from "./FloatingTools";
 import ToolChest from "./ToolChest";
@@ -32,7 +33,12 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
       <WorkshopLights />
       <Ground />
       <Garage />
-      <Sign />
+      {/* The street-facing elevation and the ground in front of it. The
+          business name now lives on a lit fascia board here, which is
+          what replaced the glowing text that used to float over the
+          roofline (the old Sign component). */}
+      <GarageExterior />
+      <Forecourt />
       <CarModel />
       <WorkshopProps />
       <ToolChest />

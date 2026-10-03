@@ -22,6 +22,25 @@ export const siteContent = {
     topBarBookLabel: "Book",
   },
 
+  // Wording on the building and the forecourt, for the exterior shot. The
+  // service names are the ones given for this site (same list as
+  // `services` below) — nothing here is an invented claim about a garage.
+  exterior: {
+    // The smaller line under the business name on the fascia board.
+    fasciaServices: "MOT · SERVICING · REPAIRS · TYRES",
+    // PLACEHOLDER — only used when `business.phone` above is still a
+    // placeholder, so the sign has something phone-shaped on it. All zeros
+    // on purpose: it is visibly not a real number, so no one can ring a
+    // stranger off the back of a demo. Fill in `business.phone` and the
+    // sign picks the real one up on its own.
+    fasciaPhonePlaceholder: "020 0000 0000",
+    // A generic blue trade sign. Wording only — no official MOT logo or
+    // crest is used anywhere, and none should be added without permission.
+    motSign: "MOT TESTING STATION",
+    // The A-frame board on the forecourt. Two short lines.
+    pavementSign: { line1: "MOTs", line2: "while you wait" },
+  },
+
   // The six scroll stages of the home page fly-through. "range" is the
   // [start, end] slice of scroll progress (0 to 1) each stage owns —
   // used to fade its caption in/out and to pick its camera position.
