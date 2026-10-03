@@ -9,6 +9,7 @@ import Sign from "./Sign";
 import CarModel from "./CarModel";
 import FloatingTools from "./FloatingTools";
 import ToolChest from "./ToolChest";
+import WorkshopProps from "./WorkshopProps";
 import CameraRig from "./CameraRig";
 import SceneReady from "./SceneReady";
 import { layout } from "./layout";
@@ -33,6 +34,7 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
       <Garage />
       <Sign />
       <CarModel />
+      <WorkshopProps />
       <ToolChest />
       <FloatingTools />
       {/* A cheap, baked-once AO blob under the car so it reads as resting

@@ -144,6 +144,11 @@ async function main() {
         });
       await page.waitForTimeout(500);
 
+      // The dressed workshop is a lot of draw calls for a CPU rasteriser
+      // (headless Chromium has no GPU here), so a frame can take seconds.
+      // Real hardware is nowhere near this slow — see PROGRESS.md.
+      page.setDefaultTimeout(120000);
+
       for (const pct of SCROLL_POINTS) {
         await page.evaluate((p) => {
           window.__qaSetScrollProgress?.(p / 100);
