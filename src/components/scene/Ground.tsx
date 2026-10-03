@@ -5,8 +5,18 @@ import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { layout } from "./layout";
 
-// How many times the 512px tile repeats across the ground plane.
-const REPEAT = 40;
+// How many times the 512px tile repeats across the ground plane. Lower
+// number = each tile covers more ground = a larger, calmer grain. At 40
+// the tile was small enough that its bumps turned into a rippling,
+// water-like pattern under the garage lights.
+const REPEAT = 26;
+
+// How much the normal map is allowed to bend the light. The map is built
+// for close-up tarmac; at full strength every tiny bump catches a specular
+// highlight and the whole forecourt shimmers like wet water. A third of
+// that keeps the texture readable without the shimmer.
+const NORMAL_STRENGTH = 0.3;
+const NORMAL_SCALE = new THREE.Vector2(NORMAL_STRENGTH, NORMAL_STRENGTH);
 
 function useAsphalt() {
   const maps = useTexture({
@@ -68,8 +78,9 @@ export default function Ground() {
         <meshStandardMaterial
           map={asphalt.map}
           normalMap={asphalt.normalMap}
+          normalScale={NORMAL_SCALE}
           roughnessMap={asphalt.roughnessMap}
-          roughness={0.55}
+          roughness={0.82}
           metalness={0}
         />
       </mesh>

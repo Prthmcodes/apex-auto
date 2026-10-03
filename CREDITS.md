@@ -11,10 +11,12 @@ scene (`public/models/car.glb`).
 - Source: [sketchfab.com/3d-models/range-rover-sport-2018-d1fe581b3baf4af89275e9aa9a1392e2](https://sketchfab.com/3d-models/range-rover-sport-2018-d1fe581b3baf4af89275e9aa9a1392e2)
 - License: [Creative Commons Attribution 4.0 (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)
 - Changes made: compressed with gltf-transform (Draco geometry, WebP
-  textures; 29.4 MB down to 1.2 MB), and its materials re-tuned in code
+  textures; 28.1 MB down to 2.6 MB), and its materials re-tuned in code
   (paint colour, glass, tyres, the see-through bonnet and light sweep).
-  The unmodified original is kept locally in `source-assets/`, which is
-  not committed.
+  The shape of the model is unchanged — the compression keeps every
+  original triangle. The unmodified original is kept locally in
+  `source-assets/`, which is not committed, and the exact compression
+  settings live in `scripts/optimise-car.mjs` so this is repeatable.
 - Attribution: **required** by CC BY 4.0. It's shown as a small credit
   line on the home page's final screen (text in `src/content/site.ts` →
   `carModelCredit`). Keep it there as long as this model is used.

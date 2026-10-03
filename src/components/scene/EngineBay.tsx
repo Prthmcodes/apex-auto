@@ -29,9 +29,16 @@ const CHECK_POSITIONS: Vec3[] = [
 ];
 
 const LABEL_LIFT = 0.2;
-// At the front of the bay, by the grille: the one spot that stays clear of
-// the check labels on both wide screens and upright phones.
-const INTRO_POSITION: Vec3 = [2.42, 1.2, BAY_Z];
+// At the BACK of the bay, high up by the bulkhead and windscreen.
+//
+// The engine camera looks down over the nose, so the bay's front (high X,
+// where the grille is) lands at the bottom of the screen and its back (low
+// X) lands at the top. This label used to sit at X 2.42 — right on the
+// grille, where it covered the badge and crowded the caption along the
+// bottom of the page. Moving it behind the check points and lifting it
+// clear puts it in the empty band under the windscreen instead: above
+// every check label, and a long way from the caption.
+const INTRO_POSITION: Vec3 = [0.92, 1.42, BAY_Z];
 
 // Built once and shared by every glow marker.
 const ringGeometry = new THREE.TorusGeometry(0.075, 0.006, 8, 40);
