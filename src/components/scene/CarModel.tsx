@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef } from "react";
-import { useGLTF } from "@react-three/drei";
+import { useEnvironment, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { layout } from "./layout";
@@ -13,10 +13,8 @@ import { bandOpacity } from "./stageFade";
 import { WHEELS_RANGE, engineReveal, sweepX, sweepStrength } from "./carStages";
 import EngineBay from "./EngineBay";
 
-export const MODEL_URL = "/models/car.glb";
-// The Draco decoder is served from this site (copied from three.js into
-// public/draco/), not from Google's CDN, which drei would use by default.
-export const DRACO_PATH = "/draco/";
+import { MODEL_URL, DRACO_PATH, ENVIRONMENT_URL } from "./assets";
+
 useGLTF.preload(MODEL_URL, DRACO_PATH);
 
 // How many full turns the wheels make over the entire page scroll. Tied to
@@ -125,7 +123,20 @@ function addBonnetXray(material: THREE.MeshStandardMaterial, uniforms: CarUnifor
 }
 
 /** Swaps one of the model's materials for a tuned, realistic copy. */
-function tuneMaterial(source: THREE.Material, uniforms: CarUniforms): THREE.Material {
+function tuneMaterial(
+  source: THREE.Material,
+  uniforms: CarUniforms,
+  envMap: THREE.Texture
+): THREE.Material {
+  const material = tuneMaterialType(source, uniforms);
+  // The car gets its own reference to the HDR, so its reflections can be
+  // stronger than the scene-wide environment light (three.js ignores a
+  // material's envMapIntensity when it relies on the scene's environment).
+  if (material instanceof THREE.MeshStandardMaterial) material.envMap = envMap;
+  return material;
+}
+
+function tuneMaterialType(source: THREE.Material, uniforms: CarUniforms): THREE.Material {
   const name = source.name;
 
   if (GLASS_MATERIALS.includes(name)) {
@@ -209,7 +220,7 @@ function tuneMaterial(source: THREE.Material, uniforms: CarUniforms): THREE.Mate
  * returns is shared and cached, so it must never be edited directly), with
  * tuned materials and handles on the parts that move.
  */
-function prepareCar(source: THREE.Object3D) {
+function prepareCar(source: THREE.Object3D, envMap: THREE.Texture) {
   const root = source.clone(true);
   const uniforms: CarUniforms = {
     uSceneInverse: { value: new THREE.Matrix4() },
@@ -228,7 +239,7 @@ function prepareCar(source: THREE.Object3D) {
     const original = child.material as THREE.Material;
     let replacement = tuned.get(original);
     if (!replacement) {
-      replacement = tuneMaterial(original, uniforms);
+      replacement = tuneMaterial(original, uniforms, envMap);
       tuned.set(original, replacement);
     }
     child.material = replacement;
@@ -282,7 +293,8 @@ function updateCar(car: PreparedCar, progress: number, reduced: boolean) {
  */
 export default function CarModel() {
   const { scene } = useGLTF(MODEL_URL, DRACO_PATH);
-  const car = useMemo(() => prepareCar(scene), [scene]);
+  const envMap = useEnvironment({ files: ENVIRONMENT_URL });
+  const car = useMemo(() => prepareCar(scene, envMap), [scene, envMap]);
   const reducedMotion = useReducedMotion();
 
   useFrame(() => {

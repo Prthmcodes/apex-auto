@@ -8,7 +8,7 @@ import { siteContent } from "@/content/site";
 import scrollState from "@/lib/scrollState";
 import { useReducedMotion } from "@/lib/useReducedMotion";
 import { theme } from "./theme";
-import { engineReveal, checkHighlight } from "./carStages";
+import { engineReveal, labelReveal, checkHighlight } from "./carStages";
 
 // Everything here is placed in the car model's own space (see CarModel.tsx):
 // X runs front (+) to back (-), Y is up from the ground, and the car's
@@ -185,7 +185,8 @@ function CheckPoint({
     glowGroup.current.scale.setScalar(0.85 + 0.3 * highlight);
 
     if (labelRef.current) {
-      labelRef.current.style.opacity = String(reveal * (0.55 + 0.45 * highlight));
+      const labelAmount = labelReveal(progress, reducedMotion.current);
+      labelRef.current.style.opacity = String(labelAmount * (0.55 + 0.45 * highlight));
       labelRef.current.style.borderColor =
         highlight > 0.5 ? theme.primary : "rgba(255,255,255,0.14)";
     }
@@ -244,7 +245,7 @@ function IntroLabel({ text }: { text: string }) {
   useFrame(() => {
     if (ref.current) {
       ref.current.style.opacity = String(
-        engineReveal(scrollState.progress, reducedMotion.current)
+        labelReveal(scrollState.progress, reducedMotion.current)
       );
     }
   });

@@ -16,6 +16,17 @@ export function engineReveal(progress: number, reducedMotion: boolean) {
 }
 
 /**
+ * 0 to 1: how visible the engine check labels are. A much quicker fade than
+ * the bonnet itself: the labels are HTML drawn over the 3D view, so if they
+ * lingered while the camera swings away they'd show through the solid car.
+ */
+export function labelReveal(progress: number, reducedMotion: boolean) {
+  return reducedMotion
+    ? hardBand(progress, ENGINE_RANGE)
+    : bandOpacity(progress, ENGINE_RANGE, 0.015);
+}
+
+/**
  * 0 to 1: how strongly check point `index` (of `count`) is highlighted.
  * The engine stage is split into equal slots, one per check, each ramping
  * up and back down in turn, so they light up one after another as you

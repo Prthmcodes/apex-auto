@@ -64,40 +64,8 @@ function DustParticles() {
   );
 }
 
-// A straight (non-volumetric) cone standing in for light spilling out of
-// the doorway onto the forecourt. No real light or shadow map — just a
-// cheap, faint, additively-blended mesh.
-const CONE_APEX = new THREE.Vector3(0, 3.0, -1.7);
-const CONE_TARGET = new THREE.Vector3(0, 0, 4.5);
-const CONE_HEIGHT = CONE_APEX.distanceTo(CONE_TARGET);
-const CONE_MID = CONE_APEX.clone().lerp(CONE_TARGET, 0.5);
-const CONE_QUATERNION = new THREE.Quaternion().setFromUnitVectors(
-  new THREE.Vector3(0, -1, 0),
-  CONE_TARGET.clone().sub(CONE_APEX).normalize()
-);
-
-function LightCone() {
-  return (
-    <mesh position={CONE_MID} quaternion={CONE_QUATERNION}>
-      <coneGeometry args={[2.4, CONE_HEIGHT, 24, 1, true]} />
-      <meshBasicMaterial
-        color={theme.accent}
-        transparent
-        opacity={0.05}
-        depthWrite={false}
-        side={THREE.DoubleSide}
-        blending={THREE.AdditiveBlending}
-        toneMapped={false}
-      />
-    </mesh>
-  );
-}
-
 export default function Atmospherics() {
   return (
-    <>
-      <DustParticles />
-      <LightCone />
-    </>
+    <DustParticles />
   );
 }

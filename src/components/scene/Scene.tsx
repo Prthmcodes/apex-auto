@@ -12,6 +12,8 @@ import CameraRig from "./CameraRig";
 import SceneReady from "./SceneReady";
 import { layout } from "./layout";
 import { theme } from "./theme";
+import { ENVIRONMENT_URL } from "./assets";
+import WorkshopLights from "./WorkshopLights";
 
 export default function Scene({ onReady }: { onReady?: () => void }) {
   const [carX, , carZ] = layout.car.position;
@@ -19,11 +21,13 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
   return (
     <>
       <Atmosphere />
-      {/* Real-world reflections and soft fill light for the car's paint,
-          glass and chrome, from a local dusk HDR (public/hdr/dusk.exr, CC0,
-          see CREDITS.md). Lighting only: the visible sky stays the theme's
-          dusk colour and fog. */}
-      <Environment files="/hdr/dusk.exr" environmentIntensity={0.9} />
+      {/* Soft fill light for the whole scene from a local dusk HDR
+          (public/hdr/dusk.exr, CC0, see CREDITS.md), kept low so the garage
+          stays moody. The car uses the same HDR at full strength for its
+          reflections (see CarModel.tsx). Lighting only: the visible sky
+          stays the theme's dusk colour and fog. */}
+      <Environment files={ENVIRONMENT_URL} environmentIntensity={0.4} />
+      <WorkshopLights />
       <Ground />
       <Garage />
       <Sign />
