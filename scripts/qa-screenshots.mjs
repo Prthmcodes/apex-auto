@@ -115,8 +115,18 @@ async function main() {
       });
       if (!hasWebGL) webglOk = false;
 
-      // Let the scene mount and the loading screen fade out.
-      await page.waitForTimeout(1500);
+      // Wait for the loading screen to actually finish (real texture
+      // loads mean this can take a few seconds, longer than any fixed
+      // guess), rather than a fixed delay that can flake under load.
+      await page
+        .waitForFunction(
+          () => document.querySelector('[aria-hidden="true"]') !== null,
+          { timeout: 20000 }
+        )
+        .catch(() => {
+          console.warn("Loading screen didn't confirm ready within 20s; continuing anyway.");
+        });
+      await page.waitForTimeout(500);
 
       for (const pct of SCROLL_POINTS) {
         await page.evaluate((p) => {

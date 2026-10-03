@@ -60,18 +60,36 @@ Phase-by-phase checklist for the Apex Auto demo site. See CLAUDE.md → "Apex Au
   - **Dev-only `?theme=` preview**: implemented via a module-scope (not render-time) check in `SceneGate.tsx` that mutates the shared `theme` object in place before any scene component mounts — deliberately *not* wired into anything server-rendered (mutating shared module state from server-side request handling would leak one visitor's preview into every other visitor's page), and deliberately *not* done inside the component's render body (the project's `react-hooks/purity` rule correctly rejects side effects during render; this runs once at module load instead, which is safe specifically because `SceneGate` only ever loads in the browser). Verified all three presets visually by screenshotting `/?theme=amber-red` and `/?theme=ice-blue`. Known scope limit, noted rather than silently skipped: this only reaches the client-side 3D scene and its overlays — `/book`'s server-rendered sections don't react to the query param, since they're not client components. Documented in `CLIENT-CHECKLIST.md`.
   - **`CLIENT-CHECKLIST.md`**: a non-developer, step-by-step walkthrough — copy the repo, edit `site.ts`, pick a theme, replace placeholders, set env vars, deploy to a new Vercel project, connect a custom domain, test the form on a phone — plus a "Never do" list (no invented reviews/prices/unapproved claims) and a 10-item pre-flight list to run through before sending a client the link.
   - **`/demo-notes`**: a dev-only page listing all six stages with a ~30-second spoken script per stage for screen-recording a pitch, plus the on-screen caption and scroll-percentage range for reference. Hidden in production via `notFound()` when `NODE_ENV === "production"` — verified both ways: a real `next build` + `next start` returns a genuine 404 for the route, while `npm run dev` serves it normally.
+- [x] **Phase 8 — Realism pass (reduced scope — see note)**: the brief assumed `public/models/car.glb` and `public/hdr/dusk.hdr` already existed in the project. **Checked first — neither did.** Asked how to proceed rather than guessing at something this consequential (replacing the signature visual asset) or fabricating a stand-in car model unilaterally; the answer was to skip the GLB/HDR swap entirely and do the rest. So: **the car stays the procedural hologram** (unchanged — still wireframe, still solidifies via `HologramShell`, still has the brake/engine detail from 3B), and the stage-beat changes described in the original brief (hotspot-only engine markers, a light-sweep diagnostics effect) were *not* applied, since those were written assuming the GLB car and weren't part of what was agreed. What *was* done:
+  - **Real materials**: sourced three CC0 PBR texture sets from [ambientCG](https://ambientcg.com) (Asphalt012, Concrete034, Bricks090) — downloaded at 1K, then resized to 512×512 and re-compressed with `sharp` (already present as a transitive Next.js dependency, so no new package added) down to **296 KB total** for all nine files, from ~20 MB as originally downloaded. See `CREDITS.md`. The neon grid is gone; the forecourt is now a textured wet-asphalt plane with painted line markings and a kerb (`Ground.tsx`). The garage's walls/roof are concrete-textured, the door pillars are brick-faced, with a handful of slat ridges on the lintel standing in for a rolled-up roller shutter, and a small framed, lit window (`Garage.tsx`).
+  - **Smaller, more tasteful sign**: moved from the lintel band to just above the roofline, font size roughly halved (`Sign.tsx`).
+  - **Lighting**: ACES filmic tone mapping; the existing ambient directional light now casts real shadows (`castShadow` + a sized orthographic shadow camera), gated off entirely on low-end devices via the same `isLowEndDevice` check that already drove the DPR cap — one Canvas-level `shadows` boolean turns the whole shadow system on/off, so no per-mesh gating was needed. Added `ContactShadows` (drei) under the car as a cheap, baked-once AO blob, specifically to address "car floating" — the car never moves, so `frames={1}` bakes it a single time. Raised Bloom's threshold and lowered its intensity so mainly the sign, door light, and light cone glow now, not the whole scene.
+  - **QA pass**: ran `npm run qa:screenshots`, found and fixed two real problems — the lit window was a flat, frameless rectangle (added a dark frame + central mullion, now reads as an actual window), and the first contact-shadow attempt was too faint to read against the warm-lit asphalt (raised opacity, tightened blur). Also found and fixed a QA-script issue, not an app bug: the fixed 1.5s wait before the first screenshot was too short once real texture loading was added, intermittently catching the loading screen mid-fade — replaced with a poll that waits for the loading screen's own `aria-hidden` state instead of guessing a delay.
+  - **`CREDITS.md`** added: the Rajdhani font (already in the project since Phase 2) plus the three new CC0 textures, all with source URLs and licences. CC0 and SIL OFL both allow use with no required on-page credit line, so none was added to the footer — explained in the file itself rather than silently assumed.
+  - Not done, and not claimed as done: GLB loading/centring/material-discovery, `gltf-transform`/Draco optimisation, `useProgress` real load-percentage tracking, the HDR environment map, and the diagnostics light-sweep/hotspot-only engine redesign — all of these were specifically about the real car model, which this pass doesn't have.
 
 ## Development phases: done
 
-Phases 0–5 and 7 are complete and committed. **Phase 6 (actual deployment) is
-intentionally left unchecked** — nothing in this repository can responsibly
-mark "we deployed to production" as done on your behalf; that's a real,
-external action for you to take (see `README.md` → "How to deploy" and
-`CLIENT-CHECKLIST.md`). Phase 6B (enquiry email delivery) is done; 6A (the
-actual Vercel deploy + domain connection) is the one remaining manual step.
+Phases 0–5, 7, and 8 are complete and committed (8 at reduced scope — see
+its entry above). **Phase 6 (actual deployment) is intentionally left
+unchecked** — nothing in this repository can responsibly mark "we deployed
+to production" as done on your behalf; that's a real, external action for
+you to take (see `README.md` → "How to deploy" and `CLIENT-CHECKLIST.md`).
+Phase 6B (enquiry email delivery) is done; 6A (the actual Vercel deploy +
+domain connection) is the one remaining manual step.
 
 ## Future ideas (not started, not asked for — just worth knowing about)
 
+- **The real car model + HDR swap** (Phase 8's original brief): once
+  `public/models/car.glb` and `public/hdr/dusk.hdr` actually exist, redo
+  this properly — `useGLTF` with Draco, auto-centre/scale/ground the model,
+  log node/material names to find the paint/glass/wheel materials,
+  `carColor` in `site.ts` applied with clearcoat, remove the now-redundant
+  hologram/brake/engine procedural geometry, `gltf-transform` + Draco +
+  WebP to get the GLB under 5 MB, `useProgress` for real load percentages,
+  and the HDR-based environment lighting. The stage-beat changes (hotspot
+  engine markers instead of a revealed engine block, a moving light-sweep
+  instead of the scan plane) belong with this, not before it.
 - Circular/soft dust-mote particles via a small custom point shader, instead
   of three.js's default square point sprites (noted as a minor QA finding
   in Phase 5, still unfixed).
