@@ -94,11 +94,11 @@ function HologramPart({
 }
 
 export default function HologramCar() {
-  const body = useMemo(buildBodyGeometry, []);
-  const cabin = useMemo(buildCabinGeometry, []);
-  const wheel = useMemo(buildWheelGeometry, []);
-  const rim = useMemo(buildRimGeometry, []);
-  const arch = useMemo(buildArchGeometry, []);
+  const body = useMemo(() => buildBodyGeometry(), []);
+  const cabin = useMemo(() => buildCabinGeometry(), []);
+  const wheel = useMemo(() => buildWheelGeometry(), []);
+  const rim = useMemo(() => buildRimGeometry(), []);
+  const arch = useMemo(() => buildArchGeometry(), []);
 
   return (
     <group position={layout.car.position}>
