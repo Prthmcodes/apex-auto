@@ -56,9 +56,18 @@ export function sequentialOpacity(
   reducedMotion: boolean,
   handover = DEFAULT_HANDOVER
 ) {
-  if (reducedMotion) return hardBand(progress, range);
-
   const [start, end] = range;
+
+  if (reducedMotion) {
+    // Half-open, unlike hardBand: with ranges that share an edge, a plain
+    // >= start && <= end test means both stages claim the boundary and
+    // both captions draw on top of each other at exactly that point.
+    // The last stage keeps its closing edge so the final caption survives
+    // the very bottom of the page.
+    const withinEnd = end >= 1 ? progress <= end : progress < end;
+    return progress >= start && withinEnd ? 1 : 0;
+  }
+
   if (progress < start || progress > end) return 0;
 
   const fadeInUntil = start <= 0 ? start : start + handover;

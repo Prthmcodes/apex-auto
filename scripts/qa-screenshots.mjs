@@ -13,6 +13,7 @@ import { mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { siteContent } from "../src/content/site.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -25,7 +26,22 @@ const VIEWPORTS = [
   { name: "mobile", width: 390, height: 844 },
   { name: "desktop", width: 1440, height: 900 },
 ];
-const SCROLL_POINTS = [0, 15, 35, 55, 75, 95, 100];
+// Every stage's own camera position, plus the midpoint between each pair
+// of neighbouring stages. The midpoints are where the handover problems
+// live — captions crossing over, props sliding past the camera, tools in
+// transit — and a stage-centres-only pass sails straight past all of it.
+// Derived from the stage ranges in site.ts rather than typed out, so
+// re-timing a stage can't leave this list quietly pointing at the wrong
+// moments.
+const STAGE_CENTRES = siteContent.stages.map((stage, i) =>
+  // Stage N's camera reaches its exact authored position at i/(n-1):
+  // the path is a curve through one control point per stage.
+  Math.round((i / (siteContent.stages.length - 1)) * 100)
+);
+const MIDPOINTS = STAGE_CENTRES.slice(0, -1).map((pct, i) =>
+  Math.round((pct + STAGE_CENTRES[i + 1]) / 2)
+);
+const SCROLL_POINTS = [...STAGE_CENTRES, ...MIDPOINTS].sort((a, b) => a - b);
 
 async function isServerUp(url) {
   try {
@@ -136,7 +152,8 @@ async function main() {
         // wait is just for the next render tick, not for easing to converge.
         await page.waitForTimeout(500);
 
-        const filename = `home-${viewport.name}-${pct}.png`;
+        const kind = STAGE_CENTRES.includes(pct) ? "stage" : "mid";
+        const filename = `home-${viewport.name}-${String(pct).padStart(3, "0")}-${kind}.png`;
         await page.screenshot({ path: path.join(OUT_DIR, filename) });
         console.log(`Saved ${filename}`);
       }
@@ -153,7 +170,16 @@ async function main() {
       await page.waitForTimeout(300);
 
       const filename = `book-${viewport.name}.png`;
-      await page.screenshot({ path: path.join(OUT_DIR, filename), fullPage: true });
+      // Headless Chromium intermittently refuses a full-page capture of a
+      // long page ("Unable to capture screenshot"). It succeeds on a
+      // second go, so retry once rather than failing the whole run and
+      // throwing away the home-page shots that already succeeded.
+      try {
+        await page.screenshot({ path: path.join(OUT_DIR, filename), fullPage: true });
+      } catch {
+        await page.waitForTimeout(1000);
+        await page.screenshot({ path: path.join(OUT_DIR, filename), fullPage: true });
+      }
       console.log(`Saved ${filename}`);
 
       await context.close();
