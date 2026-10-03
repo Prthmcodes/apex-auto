@@ -5,7 +5,7 @@ import scrollState from "@/lib/scrollState";
 import { useReducedMotion } from "@/lib/useReducedMotion";
 import { theme } from "./scene/theme";
 import { siteContent } from "@/content/site";
-import { fadeOpacity } from "./scene/stageFade";
+import { sequentialOpacity } from "./scene/stageFade";
 
 function activeStageIndex(progress: number) {
   const stages = siteContent.stages;
@@ -30,7 +30,7 @@ export default function StageOverlay() {
         const caption = captionRefs.current[i];
         if (caption) {
           caption.style.opacity = String(
-            fadeOpacity(progress, stage.range, reducedMotion.current, 0.03)
+            sequentialOpacity(progress, stage.range, reducedMotion.current)
           );
         }
 

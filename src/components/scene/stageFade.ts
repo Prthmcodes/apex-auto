@@ -28,3 +28,43 @@ export function fadeOpacity(
 ) {
   return reducedMotion ? hardBand(progress, range) : bandOpacity(progress, range, fade);
 }
+
+/** How long one caption takes to fade, in scroll progress. */
+const DEFAULT_HANDOVER = 0.035;
+
+/**
+ * Like bandOpacity, but for a set of ranges that run back to back — the
+ * stage captions, whose ranges share their edges (…0.3], [0.3…).
+ *
+ * bandOpacity fades each range in starting *before* its own start and out
+ * until *after* its own end, which for touching ranges means the incoming
+ * caption starts appearing while the outgoing one is still at full
+ * strength: two captions stacked on top of each other at every boundary.
+ *
+ * This keeps the whole fade inside the range instead, so one caption is
+ * all the way out before the next starts coming in. The two meet at
+ * exactly 0 on the boundary, so the handover reads as one caption
+ * replacing another rather than a gap.
+ *
+ * The page's first and last captions don't fade at their outer edges —
+ * the opening caption should already be readable when the page loads, and
+ * the closing one shouldn't dim as you reach the bottom.
+ */
+export function sequentialOpacity(
+  progress: number,
+  range: readonly [number, number],
+  reducedMotion: boolean,
+  handover = DEFAULT_HANDOVER
+) {
+  if (reducedMotion) return hardBand(progress, range);
+
+  const [start, end] = range;
+  if (progress < start || progress > end) return 0;
+
+  const fadeInUntil = start <= 0 ? start : start + handover;
+  const fadeOutFrom = end >= 1 ? end : end - handover;
+
+  if (progress < fadeInUntil) return (progress - start) / handover;
+  if (progress > fadeOutFrom) return (end - progress) / handover;
+  return 1;
+}
