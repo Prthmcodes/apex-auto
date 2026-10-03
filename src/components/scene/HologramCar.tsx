@@ -8,6 +8,7 @@ import { siteContent } from "@/content/site";
 import scrollState from "@/lib/scrollState";
 import { useReducedMotion } from "@/lib/useReducedMotion";
 import { HologramPart } from "./HologramPart";
+import HologramShell from "./HologramShell";
 import BrakeAssembly from "./BrakeAssembly";
 import EngineBlock from "./EngineBlock";
 import Diagnostics from "./Diagnostics";
@@ -124,8 +125,8 @@ export default function HologramCar() {
 
   return (
     <group position={layout.car.position} rotation={layout.car.rotation}>
-      <HologramPart geometry={body} dimRange={ENGINE_STAGE_RANGE} />
-      <HologramPart
+      <HologramShell geometry={body} dimRange={ENGINE_STAGE_RANGE} />
+      <HologramShell
         geometry={cabin}
         dimRange={ENGINE_STAGE_RANGE}
         brightenAtX={0}
