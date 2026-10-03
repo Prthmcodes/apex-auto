@@ -7,6 +7,7 @@ import Ground from "./Ground";
 import Garage from "./Garage";
 import Sign from "./Sign";
 import CarModel from "./CarModel";
+import FloatingTools from "./FloatingTools";
 import CameraRig from "./CameraRig";
 import SceneReady from "./SceneReady";
 import { layout } from "./layout";
@@ -27,6 +28,7 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
       <Garage />
       <Sign />
       <CarModel />
+      <FloatingTools />
       {/* A cheap, baked-once AO blob under the car so it reads as resting
           on the ground rather than floating — the car itself doesn't move,
           so frames={1} renders it a single time and reuses it. */}

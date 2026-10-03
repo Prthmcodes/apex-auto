@@ -15,6 +15,8 @@ const MATERIALS = {
   toolSteel: "#c4c9d0",
   toolGrip: "#1c1e23",
   sparkCeramic: "#eeeae2",
+  caliperRed: "#a3141c",
+  gaugeFace: "#e6e9ec",
   oilBottle: "#2b2d31",
   tyreTint: "#5a5a5a",
   glassTint: "#101318",
