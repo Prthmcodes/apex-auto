@@ -6,12 +6,12 @@ import { theme } from "@/components/scene/theme";
 // screen-recording the home page scroll. Mentions what's happening on
 // screen and why, not business claims — safe to reuse for any client.
 const WALKTHROUGH: Record<string, string> = {
-  arrive: `We open wide, outside ${siteContent.business.name}'s forecourt at dusk. The grid, the glow, the garage — all of it is generated in code, not photos or a 3D model file, so it loads fast and re-skins instantly for a different brand. Keep scrolling and we roll straight toward the open door.`,
-  inspect: `Now we're approaching the door, and the car inside starts to resolve — right now it's a hologram, because nothing's been inspected yet. This is the "first look over" a customer's car gets before anything happens. Notice the top bar appearing with a direct Book link, available from here on.`,
-  wheels: `We're in close on the front wheel now — watch it actually spinning as you scroll, tied to scroll position, not just looping on its own. A brake disc and caliper fade in to show the kind of per-part detail we can call out, stage by stage.`,
-  engine: `Rising up over the bonnet, the body dims slightly and a simple engine block appears underneath with floating labels — oil, filter, battery. This is where you'd highlight whatever service matters most: an MOT, a full service, whatever story the client wants told first.`,
-  diagnostics: `Pulling back to a full side view, a scan line sweeps the length of the car and each part lights up as it passes, with a few "all OK" readouts beside it. By now the car's fully solidified from hologram to a solid-looking model — hologram to real, mirroring "before we look" to "after we've checked."`,
-  done: `We land back outside, facing the door, sign lit, and now two real buttons: Book a service, and Call us — both live from here on, no hunting for a contact page. That's the whole pitch: a fly-through that's fully re-skinnable, and ends on a clear next step.`,
+  arrive: `We open wide, outside ${siteContent.business.name}'s forecourt at dusk, with the workshop lit up and a car waiting inside. The garage, the lighting and the animation are all built in code, so it loads fast and re-skins instantly for a different brand. Keep scrolling and we roll straight toward the open door.`,
+  inspect: `Now we're at the door, looking at the car under the workshop lights. This is the "first look over" a customer's car gets before anything happens. Notice the top bar appearing with a direct Book link, available from here on.`,
+  wheels: `We drop down low on the front wheel. It turns as you scroll, tied to scroll position rather than looping on its own, and a soft ring highlights the brake disc behind the spokes. That's the kind of per-part detail we can call out, stage by stage.`,
+  engine: `Rising up over the bonnet, it turns see-through to show the engine bay underneath, and the checks light up one by one: ${siteContent.engineChecks.points.join(", ")}. Workshop tools drift in either side of the car. This is where you'd highlight whatever service matters most: an MOT, a full service, whatever story the client wants told first.`,
+  diagnostics: `Swinging round to a side view, a soft band of light travels along the bodywork from nose to tail, and the tools float overhead. It's the "line by line" diagnostics idea, shown without fake test results.`,
+  done: `We land back outside, facing the door, sign lit, and now two real buttons: Book a service, and Call us, both live from here on, no hunting for a contact page. That's the whole pitch: a fly-through that's fully re-skinnable, and ends on a clear next step.`,
 };
 
 export default function DemoNotesPage() {

@@ -1,7 +1,9 @@
 # Apex Auto
 
-A demo 3D garage website: a scroll-driven "fly-through" home page built entirely
-in code (no 3D model files), plus a plain, fast `/book` page with an enquiry form.
+A demo 3D garage website: a scroll-driven "fly-through" home page, plus a plain,
+fast `/book` page with an enquiry form. The garage, engine bay, tools and all the
+animation are built in code; the car itself is one real 3D model file, and the
+lighting uses one HDR sky image (both credited in `CREDITS.md`).
 
 See `CLAUDE.md` for the full project brief and rules, and `PROGRESS.md` for a
 phase-by-phase build log.
@@ -54,6 +56,10 @@ A few things to know:
   form's dropdown both read from this same list automatically.
 - `pricingNote` ("Ask for a quote") is shown instead of a price on every
   service card. Only replace it with real prices once they're confirmed.
+- `carColor` sets the car's paint colour, and `engineChecks` sets the
+  "We check:" labels shown over the engine bay. `carModelCredit` is the
+  credit line the car model's licence requires; only change it if you swap
+  the model.
 - The six home-page scroll stages (captions, titles, scroll ranges) are also
   here, but changing the camera positions themselves requires editing
   `src/components/scene/cameraPath.ts` instead — that's a code change, not a
