@@ -1,9 +1,22 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { theme } from "./theme";
 import { layout } from "./layout";
+import { siteContent } from "@/content/site";
+import scrollState from "@/lib/scrollState";
+import { useReducedMotion } from "@/lib/useReducedMotion";
+import { HologramPart } from "./HologramPart";
+import BrakeAssembly from "./BrakeAssembly";
+import EngineBlock from "./EngineBlock";
+import Diagnostics from "./Diagnostics";
+
+const ENGINE_STAGE_RANGE = siteContent.stages[3].range;
+
+// How many full turns the wheels make over the entire page scroll. Tied to
+// scroll progress, not elapsed time, so it never spins on its own.
+const WHEEL_SPIN_TURNS = 4;
 
 function buildBodyGeometry() {
   const shape = new THREE.Shape();
@@ -59,36 +72,45 @@ function buildArchGeometry() {
   return new THREE.TorusGeometry(0.58, 0.035, 8, 24, Math.PI);
 }
 
+// Front-right wheel is the one the camera focuses on in stage 3; its brake
+// assembly lives there. See cameraPath.ts's FRONT_WHEEL for the world-space
+// equivalent of this same point.
+export const FOCUS_WHEEL_LOCAL: [number, number, number] = [1.3, 0.45, -0.78];
+
 const WHEEL_POSITIONS: [number, number, number][] = [
   [1.3, 0.45, 0.78],
-  [1.3, 0.45, -0.78],
+  FOCUS_WHEEL_LOCAL,
   [-1.3, 0.45, 0.78],
   [-1.3, 0.45, -0.78],
 ];
 
-function HologramPart({
-  geometry,
+function SpinningWheel({
   position,
+  wheelGeometry,
+  rimGeometry,
+  archGeometry,
 }: {
-  geometry: THREE.BufferGeometry;
-  position?: [number, number, number];
+  position: [number, number, number];
+  wheelGeometry: THREE.BufferGeometry;
+  rimGeometry: THREE.BufferGeometry;
+  archGeometry: THREE.BufferGeometry;
 }) {
-  const edges = useMemo(() => new THREE.EdgesGeometry(geometry, 20), [geometry]);
+  const spinRef = useRef<THREE.Group>(null!);
+  const reducedMotion = useReducedMotion();
+
+  useFrame(() => {
+    spinRef.current.rotation.z = reducedMotion.current
+      ? 0
+      : -scrollState.progress * WHEEL_SPIN_TURNS * Math.PI * 2;
+  });
 
   return (
     <group position={position}>
-      <mesh geometry={geometry}>
-        <meshBasicMaterial
-          color={theme.teal}
-          transparent
-          opacity={0.07}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      <lineSegments geometry={edges}>
-        <lineBasicMaterial color={theme.teal} toneMapped={false} />
-      </lineSegments>
+      <group ref={spinRef}>
+        <HologramPart geometry={wheelGeometry} brightenAtX={position[0]} />
+        <HologramPart geometry={rimGeometry} brightenAtX={position[0]} />
+      </group>
+      <HologramPart geometry={archGeometry} />
     </group>
   );
 }
@@ -102,15 +124,24 @@ export default function HologramCar() {
 
   return (
     <group position={layout.car.position} rotation={layout.car.rotation}>
-      <HologramPart geometry={body} />
-      <HologramPart geometry={cabin} />
+      <HologramPart geometry={body} dimRange={ENGINE_STAGE_RANGE} />
+      <HologramPart
+        geometry={cabin}
+        dimRange={ENGINE_STAGE_RANGE}
+        brightenAtX={0}
+      />
       {WHEEL_POSITIONS.map((pos) => (
-        <group key={pos.join(",")}>
-          <HologramPart geometry={wheel} position={pos} />
-          <HologramPart geometry={rim} position={pos} />
-          <HologramPart geometry={arch} position={[pos[0], 0.45, pos[2]]} />
-        </group>
+        <SpinningWheel
+          key={pos.join(",")}
+          position={pos}
+          wheelGeometry={wheel}
+          rimGeometry={rim}
+          archGeometry={arch}
+        />
       ))}
+      <BrakeAssembly wheelPosition={FOCUS_WHEEL_LOCAL} />
+      <EngineBlock />
+      <Diagnostics />
     </group>
   );
 }

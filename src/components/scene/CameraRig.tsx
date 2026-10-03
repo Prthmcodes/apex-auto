@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import scrollState from "@/lib/scrollState";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 import { siteContent } from "@/content/site";
 import { positionPath, lookAtPath } from "./cameraPath";
 
@@ -25,19 +26,7 @@ export default function CameraRig() {
   const smoothProgress = useRef(0);
   const position = useRef(new THREE.Vector3());
   const lookAt = useRef(new THREE.Vector3());
-  const reducedMotion = useRef(false);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    reducedMotion.current = query.matches;
-
-    const handleChange = (event: MediaQueryListEvent) => {
-      reducedMotion.current = event.matches;
-    };
-
-    query.addEventListener("change", handleChange);
-    return () => query.removeEventListener("change", handleChange);
-  }, []);
+  const reducedMotion = useReducedMotion();
 
   useFrame(({ camera }, delta) => {
     const progress = THREE.MathUtils.clamp(scrollState.progress, 0, 1);

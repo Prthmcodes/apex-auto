@@ -63,6 +63,20 @@ export const siteContent = {
     },
   ],
 
+  // Floating labels on the engine block during the "engine" stage. Generic
+  // part names only — not a claim about what's actually serviced.
+  engineLabels: ["Oil", "Filter", "Battery"] as string[],
+
+  // Decorative readout chips shown beside the car during the "diagnostics"
+  // stage. These are fake/placeholder UI dressing, not real inspection
+  // results — see the code comment in Diagnostics.tsx.
+  diagnosticsReadouts: [
+    "Brakes OK",
+    "Tyres OK",
+    "Fluids OK",
+    "Lights OK",
+  ] as string[],
+
   services: [] as string[],
   // PLACEHOLDER — add real services once confirmed, e.g. "MOT testing".
 

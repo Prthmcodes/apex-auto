@@ -2,25 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import scrollState from "@/lib/scrollState";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 import { theme } from "./scene/theme";
 import { siteContent } from "@/content/site";
-
-const FADE = 0.03;
-
-function bandOpacity(
-  progress: number,
-  range: readonly [number, number],
-  hard: boolean
-) {
-  const [start, end] = range;
-  if (hard) {
-    return progress >= start && progress <= end ? 1 : 0;
-  }
-  if (progress < start - FADE || progress > end + FADE) return 0;
-  if (progress < start) return (progress - (start - FADE)) / FADE;
-  if (progress > end) return 1 - (progress - end) / FADE;
-  return 1;
-}
+import { fadeOpacity } from "./scene/stageFade";
 
 function activeStageIndex(progress: number) {
   const stages = siteContent.stages;
@@ -33,17 +18,9 @@ function activeStageIndex(progress: number) {
 export default function StageOverlay() {
   const captionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dotRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const reducedMotion = useRef(false);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    reducedMotion.current = query.matches;
-
-    const handleChange = (event: MediaQueryListEvent) => {
-      reducedMotion.current = event.matches;
-    };
-    query.addEventListener("change", handleChange);
-
     let frame: number;
     const tick = () => {
       const progress = scrollState.progress;
@@ -53,7 +30,7 @@ export default function StageOverlay() {
         const caption = captionRefs.current[i];
         if (caption) {
           caption.style.opacity = String(
-            bandOpacity(progress, stage.range, reducedMotion.current)
+            fadeOpacity(progress, stage.range, reducedMotion.current, 0.03)
           );
         }
 
@@ -77,9 +54,8 @@ export default function StageOverlay() {
 
     return () => {
       cancelAnimationFrame(frame);
-      query.removeEventListener("change", handleChange);
     };
-  }, []);
+  }, [reducedMotion]);
 
   return (
     <>

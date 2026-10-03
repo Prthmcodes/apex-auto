@@ -7,16 +7,7 @@ import scrollState from "@/lib/scrollState";
 import { theme } from "./theme";
 import { siteContent } from "@/content/site";
 import { FRONT_WHEEL, BONNET } from "./cameraPath";
-
-const FADE = 0.04;
-
-function bandOpacity(progress: number, range: readonly [number, number]) {
-  const [start, end] = range;
-  if (progress < start - FADE || progress > end + FADE) return 0;
-  if (progress < start) return (progress - (start - FADE)) / FADE;
-  if (progress > end) return 1 - (progress - end) / FADE;
-  return 1;
-}
+import { bandOpacity } from "./stageFade";
 
 function MarkerDot({
   position,
