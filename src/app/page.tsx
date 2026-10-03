@@ -1,25 +1,17 @@
-"use client";
+import type { Metadata } from "next";
+import HomeClient from "@/components/HomeClient";
+import { siteContent } from "@/content/site";
 
-import { useState } from "react";
-import dynamic from "next/dynamic";
-import ScrollRig from "@/components/ScrollRig";
-import StageOverlay from "@/components/StageOverlay";
-import LoadingScreen from "@/components/LoadingScreen";
-import SceneErrorBoundary from "@/components/SceneErrorBoundary";
-
-const Experience = dynamic(() => import("@/components/Experience"), {
-  ssr: false,
-});
+export const metadata: Metadata = {
+  title: siteContent.seo.home.title,
+  description: siteContent.seo.home.description,
+  openGraph: {
+    title: siteContent.seo.home.title,
+    description: siteContent.seo.home.description,
+    type: "website",
+  },
+};
 
 export default function Home() {
-  const [ready, setReady] = useState(false);
-
-  return (
-    <SceneErrorBoundary>
-      <Experience onReady={() => setReady(true)} />
-      <StageOverlay />
-      <ScrollRig />
-      <LoadingScreen ready={ready} />
-    </SceneErrorBoundary>
-  );
+  return <HomeClient />;
 }

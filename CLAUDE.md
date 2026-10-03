@@ -18,5 +18,5 @@ Two pages:
 - "Call now" and "Book now" are real HTML buttons, rendered outside the canvas (not drawn in the 3D scene).
 - Scene code lives in `src/components/scene`, with all colours defined in one theme file.
 - Light mode on phones. No camera movement when `prefers-reduced-motion` is set.
-- No backend features.
+- No backend features beyond the `/api/enquiry` form-submission endpoint added in Phase 4 (validates input, logs to the server console — no email/database yet).
 - After each phase: run the build, update PROGRESS.md, and commit as `phase N: description`.

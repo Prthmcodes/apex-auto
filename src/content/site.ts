@@ -15,10 +15,11 @@ export const siteContent = {
   },
 
   cta: {
-    callNowLabel: "Call now",
+    callNowLabel: "Call us",
     callNowHref: "tel:PLACEHOLDER_PHONE_NUMBER",
-    bookNowLabel: "Book now",
+    bookNowLabel: "Book a service",
     bookNowHref: "/book",
+    topBarBookLabel: "Book",
   },
 
   // The six scroll stages of the home page fly-through. "range" is the
@@ -77,14 +78,57 @@ export const siteContent = {
     "Lights OK",
   ] as string[],
 
-  services: [] as string[],
-  // PLACEHOLDER — add real services once confirmed, e.g. "MOT testing".
+  // The /book page's services list. Names are fixed (given directly, not
+  // invented); descriptions are placeholders pending real copy.
+  services: [
+    {
+      name: "MOT",
+      description: "PLACEHOLDER — one-line description of the MOT testing service.",
+    },
+    {
+      name: "Servicing",
+      description: "PLACEHOLDER — one-line description of the servicing options on offer.",
+    },
+    {
+      name: "Brakes and tyres",
+      description: "PLACEHOLDER — one-line description of brake and tyre work.",
+    },
+    {
+      name: "Diagnostics",
+      description: "PLACEHOLDER — one-line description of the diagnostics service.",
+    },
+  ],
+
+  // Shown instead of a price on every service card. Never replace this with
+  // an invented number — only a real, owner-confirmed price list.
+  pricingNote: "Ask for a quote",
 
   reviews: [] as Array<{ author: string; quote: string }>,
   // PLACEHOLDER — never invent reviews. Add only real, owner-supplied quotes.
 
   pricing: [] as Array<{ label: string; price: string }>,
   // PLACEHOLDER — never invent prices. Add only real, owner-confirmed prices.
+
+  enquiryForm: {
+    submitLabel: "Send enquiry",
+    submittingLabel: "Sending…",
+    successMessage:
+      "Thanks — we've got your enquiry and will be in touch shortly.",
+    errorMessage: "Something went wrong sending that. Please try calling us instead.",
+  },
+
+  seo: {
+    home: {
+      title: "Apex Auto — East London",
+      description:
+        "A scroll-driven 3D look under the bonnet at Apex Auto, East London.",
+    },
+    book: {
+      title: "Book a service — Apex Auto",
+      description:
+        "Book a service with Apex Auto in East London — MOT, servicing, brakes and tyres, diagnostics.",
+    },
+  },
 } as const;
 
 export type SiteContent = typeof siteContent;
