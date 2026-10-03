@@ -67,13 +67,48 @@ Phase-by-phase checklist for the Apex Auto demo site. See CLAUDE.md → "Apex Au
   - **QA pass**: ran `npm run qa:screenshots`, found and fixed two real problems — the lit window was a flat, frameless rectangle (added a dark frame + central mullion, now reads as an actual window), and the first contact-shadow attempt was too faint to read against the warm-lit asphalt (raised opacity, tightened blur). Also found and fixed a QA-script issue, not an app bug: the fixed 1.5s wait before the first screenshot was too short once real texture loading was added, intermittently catching the loading screen mid-fade — replaced with a poll that waits for the loading screen's own `aria-hidden` state instead of guessing a delay.
   - **`CREDITS.md`** added: the Rajdhani font (already in the project since Phase 2) plus the three new CC0 textures, all with source URLs and licences. CC0 and SIL OFL both allow use with no required on-page credit line, so none was added to the footer — explained in the file itself rather than silently assumed.
   - Not done, and not claimed as done: GLB loading/centring/material-discovery, `gltf-transform`/Draco optimisation, `useProgress` real load-percentage tracking, the HDR environment map, and the diagnostics light-sweep/hotspot-only engine redesign — all of these were specifically about the real car model, which this pass doesn't have.
-- [ ] **Phase 8B — Real car, HDR, engine checks (in progress, not committed)**: the optimised `public/models/car.glb` (1.2 MB, down from 29 MB) and `public/hdr/dusk.exr` (1.4 MB) are in place, and `src/components/scene/CarModel.tsx` is drafted, but it isn't wired into `Scene.tsx` yet — the live scene still shows the hologram car. Still to do: `EngineBay.tsx` (CarModel imports it but it doesn't exist yet, so the full build only passes with CarModel left out), swapping `HologramCar` for `CarModel`, the HDR environment, real load progress, floating tools, the diagnostics light sweep, the car's CC BY credit, and a lint fix in CarModel (it edits the loaded model's materials directly, which the `react-hooks/immutability` rule rejects).
-  - **Fix: engine labels crash** (committed separately): the 8B work renamed `siteContent.engineLabels` to `siteContent.engineChecks` (`intro: "We check:"` plus `points: Oil level, Coolant, Battery, Brake fluid`), but `EngineBlock.tsx`, which the hologram car still renders, kept reading the old name, so the home page crashed with `Cannot read properties of undefined (reading 'map')`. `EngineBlock` now reads `engineChecks` and shows the "We check:" heading plus one label per check point, with a fourth label position added for the fourth check. It stays until `CarModel` replaces the hologram car, and then gets removed along with the rest of the hologram code. Verified by scrolling 0–100% in a headless browser: no console errors and no Next.js error overlay.
+- [x] **Phase 8B — Real car, engine checks, tools (overnight run)**: the hologram car is gone. The home page now shows a real gloss-black SUV model in a warmly lit workshop, with a see-through bonnet over an engine bay, floating tools, and a light sweep for diagnostics. Committed step by step (`phase 8b: …` commits), ending with "phase 8b: realistic car and checks".
+  - **The car** (`CarModel.tsx`): loads `public/models/car.glb` (1.2 MB, Draco-compressed), centres it, scales it to `layout.car.length` (4.87 m) and rests its tyres on the ground. Gloss black clearcoat paint from `site.ts` → `carColor`, dark privacy glass, rubber tyres, polished alloy trim, softly lit head and tail lights. It works on its **own copy** of the model and materials (this fixed the `react-hooks/immutability` lint error: the shared, cached copy is never edited). All four wheels turn with scroll.
+  - **Engine stage** (`EngineBay.tsx`): the model has no separate bonnet part, so it can't swing open. The brief's fallback is used instead: the bonnet, its badge and the wings fade see-through, revealing a procedural bay (engine block and cover, intake, air box, radiator, hoses, battery, coolant tank, brake fluid reservoir) in dark metal with faint accent edges. "We check:" plus Oil level, Coolant, Battery, Brake fluid (all from `site.ts` → `engineChecks`) light up one at a time as you scroll, each with a soft glow ring.
+  - **Wheels stage**: a thin glowing ring over the front brake disc while the wheel turns.
+  - **Floating tools** (`FloatingTools.tsx`): spanner, oil bottle, brake disc with caliper, tyre-pressure gauge, spark plug, torque wrench. All procedural, geometry and materials built once and shared, nothing created per frame. They grow in during "engine", hover beside the car, then arc over the roof to hover above it for "diagnostics", and shrink away at the end. Slow bob and turn; frozen under reduced motion.
+  - **Diagnostics stage**: the scan plane and fake "OK" chips are gone. A soft band of light travels nose to tail along the bodywork (in the body's own shader, so it's cheap), with a real moving light so the paint and wheels catch a travelling glint. Off under reduced motion.
+  - **Lighting and scene** (`WorkshopLights.tsx`, `Scene.tsx`): dusk HDR environment from the local file (no CDN), two warm overhead strip lights whose reflections run along the black roof and bonnet, and a cool rim light from the back wall to outline the car. The asphalt texture was desaturated (its red cracks looked odd from above), the kerb moved out from behind the Arrive caption, and the old fake orange "light cone" removed.
+  - **Loading**: the whole scene waits behind `<Suspense>` until the model, HDR and textures have loaded. The loading bar now shows real download progress (`useProgress`, reported from inside the 3D bundle so the loading screen never pulls three.js in early).
+  - **Removed**: `HologramCar`, `HologramPart`, `HologramShell`, `BrakeAssembly`, `EngineBlock`, `Diagnostics`, `scan.ts`, `Markers`, `diagnosticsReadouts` in `site.ts`, and `carSolid` in `theme.ts`. Nothing references them.
+  - **Credits**: `CREDITS.md` now covers the car model, the HDR and the Draco decoder. The car's CC BY 4.0 licence requires a visible credit, so a small credit line (text in `site.ts` → `carModelCredit`) appears under the buttons on the final "Done" screen.
+  - **Docs**: `/demo-notes` script rewritten for the new visuals; README updated.
+  - **Checks**: `npm run build` and `npm run lint` both clean. `npm run qa:screenshots` run several times and every desktop and mobile shot looked at (fixes listed under decisions below). `qa:lowpower` passes (simulated 3x phone renders at 1.5). `qa:fallback` passes (no WebGL: fallback page, three.js never downloaded). Total 3D asset download is about 3.6 MB (car 1.2 MB, HDR 1.9 MB, decoder 0.25 MB, textures 0.3 MB).
+  - **Fix: engine labels crash** (committed separately): the 8B work renamed `siteContent.engineLabels` to `siteContent.engineChecks` (`intro: "We check:"` plus `points: Oil level, Coolant, Battery, Brake fluid`), but `EngineBlock.tsx`, which the hologram car still renders, kept reading the old name, so the home page crashed with `Cannot read properties of undefined (reading 'map')`. `EngineBlock` now reads `engineChecks` and shows the "We check:" heading plus one label per check point, with a fourth label position added for the fourth check. `EngineBlock` was later removed with the rest of the hologram code once `CarModel` replaced it. Verified by scrolling 0–100% in a headless browser: no console errors and no Next.js error overlay.
+  - **Decisions made overnight** (the brief said to decide and note rather than ask):
+    1. **The HDR from the previous session was broken.** Its downsized `dusk.exr` had every pixel at brightness 1,000+ (the conversion had misread the file), which turned the whole 3D view solid white. Rebuilt it from the 4K original in `source-assets/` with three.js's own EXR reader/writer: 1024x512, 1.9 MB (under your 3 MB limit), the sun clamped so it can't overflow. It's Poly Haven's "Modern Evening Street" (name read from the file's header).
+    2. **The Draco decoder is served from this site** (`public/draco/`, copied from three.js), because drei otherwise fetches it from Google's CDN. Added to the lint ignore list, since it's minified vendor code.
+    3. **Glass is plain tinted glass, not "transmission" glass.** True transmission costs an extra full render every frame; dark privacy glass suits a black SUV anyway.
+    4. **The car carries its own copy of the HDR.** three.js silently ignores a material's own reflection strength when it uses the scene-wide environment, so the car couldn't reflect more than the walls. With its own copy, the garage stays dim and moody (scene environment at 0.4) while the car keeps its reflections. Paint reflections then tuned down so gloss black doesn't read as silver.
+    5. **The previous session's wheel-part guess was wrong.** It treated a tiny part (`Object_35`) as the brake caliper and left it still. The calipers are actually part of the static body. The tyre, spokes and disc are one textured mesh, so the brake highlight is a ring over the disc rather than recolouring it.
+    6. **The camera path was left alone.** Its tightest moment passes about 1 m above the front wing between "engine" and "diagnostics". That's not a collision, and changing the path would reframe every stage. The engine labels now fade out much faster instead, so they no longer show through the car during that swing.
+    7. **Tools have separate spots for wide screens and upright phones**, chosen by projecting each spot through the actual stage cameras, because the phone's engine shot has no room beside the car.
+    8. **The credit line only shows on the final screen**, not throughout, so it doesn't clutter the fly-through.
+    9. **Phones are capped at 1.5x pixel ratio** (previously only "low-end" devices were; a typical 8-core phone rendered at 2x).
+    10. **Another Claude session edited the project mid-run.** At about 05:08 an older session (`3d-garage-3e`, likely the one that hit its usage limit) overwrote `EngineBay.tsx` with a version that imported the deleted hologram code, breaking the build. It was restored from git (the overwritten version was saved outside the project first, so nothing is lost), and that session was messaged asking it not to edit while this one worked. **Before starting new work, close that other session or check it isn't still running.**
+  - **Blocked**: nothing.
+  - **Needs your decision**: the model is a **Range Rover Sport**, and the "RANGE ROVER" badge on its bonnet is visible in the inspect and engine shots. CC BY covers the 3D model's copyright, not Land Rover's trademarks. Fine for a demo pitch; for a paying client's live site, consider swapping in a generic SUV model (the code finds parts by name, so a different model would need its wheel node names updated in `CarModel.tsx`).
+  - **Not verified here**: real frame rate. The headless test browser renders in software, so 60fps on a mid laptop and smoothness on a real phone need checking on real hardware.
+  - **What to check in the browser** (`npm run dev`, then open the site):
+    1. The loading bar fills up, then the scene appears all at once (no pieces popping in).
+    2. Scroll the whole way down and back up: no red error box, no flicker.
+    3. Inspect: the black car is clearly visible under the warm ceiling lights.
+    4. Wheels: the front wheel turns as you scroll, with a thin teal ring over the brake disc.
+    5. Engine: the bonnet turns see-through, the bay appears, and Oil level, Coolant, Battery, Brake fluid light up in turn. Tools hover either side of the car.
+    6. Diagnostics: a soft light travels along the side of the car, and the tools float above the roof without touching it.
+    7. Done: Book/Call buttons, with the small car-model credit line underneath.
+    8. On your phone: the labels don't overlap, the tools stay clear of the car and captions, and it scrolls smoothly.
+    9. With "reduce motion" switched on in your OS: no camera gliding, no tool bobbing, no light sweep.
 
 ## Development phases: done
 
-Phases 0–5, 7, and 8 are complete and committed (8 at reduced scope — see
-its entry above). **Phase 6 (actual deployment) is intentionally left
+Phases 0–5, 7, 8 and 8B are complete and committed (8 was done at reduced
+scope; 8B then added the real car — see both entries above). **Phase 6 (actual deployment) is intentionally left
 unchecked** — nothing in this repository can responsibly mark "we deployed
 to production" as done on your behalf; that's a real, external action for
 you to take (see `README.md` → "How to deploy" and `CLIENT-CHECKLIST.md`).
@@ -82,16 +117,10 @@ domain connection) is the one remaining manual step.
 
 ## Future ideas (not started, not asked for — just worth knowing about)
 
-- **The real car model + HDR swap** (Phase 8's original brief): once
-  `public/models/car.glb` and `public/hdr/dusk.hdr` actually exist, redo
-  this properly — `useGLTF` with Draco, auto-centre/scale/ground the model,
-  log node/material names to find the paint/glass/wheel materials,
-  `carColor` in `site.ts` applied with clearcoat, remove the now-redundant
-  hologram/brake/engine procedural geometry, `gltf-transform` + Draco +
-  WebP to get the GLB under 5 MB, `useProgress` for real load percentages,
-  and the HDR-based environment lighting. The stage-beat changes (hotspot
-  engine markers instead of a revealed engine block, a moving light-sweep
-  instead of the scan plane) belong with this, not before it.
+- **A genuinely opening bonnet**: needs a car model whose bonnet is a
+  separate part. The current one isn't, so the bonnet goes see-through
+  instead. Worth checking for this if the model is ever swapped (see the
+  trademark note in Phase 8B).
 - Circular/soft dust-mote particles via a small custom point shader, instead
   of three.js's default square point sprites (noted as a minor QA finding
   in Phase 5, still unfixed).
