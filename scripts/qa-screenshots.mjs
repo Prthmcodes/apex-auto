@@ -134,15 +134,19 @@ async function main() {
       // Wait for the loading screen to actually finish (real texture
       // loads mean this can take a few seconds, longer than any fixed
       // guess), rather than a fixed delay that can flake under load.
+      // Generous: the car model, the HDR and every texture have to load,
+      // and on the GPU-less CI machine the first frames are slow enough
+      // that a shorter wait reliably caught the loading screen instead of
+      // the scene — every "arrive" shot came back blank.
       await page
         .waitForFunction(
           () => document.querySelector('[aria-hidden="true"]') !== null,
-          { timeout: 20000 }
+          { timeout: 90000 }
         )
         .catch(() => {
-          console.warn("Loading screen didn't confirm ready within 20s; continuing anyway.");
+          console.warn("Loading screen didn't confirm ready within 90s; continuing anyway.");
         });
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(6000);
 
       // The dressed workshop is a lot of draw calls for a CPU rasteriser
       // (headless Chromium has no GPU here), so a frame can take seconds.
