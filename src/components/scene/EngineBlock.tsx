@@ -27,11 +27,18 @@ function buildPulleyGeometry() {
   return geometry;
 }
 
+// One position per entry in siteContent.engineChecks.points, in order
+// (Oil level, Coolant, Battery, Brake fluid). Add a position here if you add
+// a check point in site.ts.
 const LABEL_POSITIONS: [number, number, number][] = [
   [1.1, 0.78, 0.15],
   [0.75, 0.95, 0.25],
   [0.55, 0.65, -0.35],
+  [1.35, 0.72, -0.3],
 ];
+
+// Where the "We check:" heading floats, above the block.
+const INTRO_POSITION: [number, number, number] = [0.95, 1.3, 0];
 
 function EngineLabel({
   position,
@@ -71,14 +78,14 @@ function EngineLabel({
 
 /**
  * A simple engine block revealed under the bonnet during the "engine"
- * stage, with a few generic floating labels. Text comes from
- * src/content/site.ts (siteContent.engineLabels).
+ * stage, with a "We check:" heading and one floating label per check point.
+ * Text comes from src/content/site.ts (siteContent.engineChecks).
  */
 export default function EngineBlock() {
   const block = useMemo(() => buildBlockGeometry(), []);
   const intake = useMemo(() => buildIntakeGeometry(), []);
   const pulley = useMemo(() => buildPulleyGeometry(), []);
-  const labels = siteContent.engineLabels;
+  const { intro, points } = siteContent.engineChecks;
 
   return (
     <group>
@@ -102,7 +109,8 @@ export default function EngineBlock() {
         position={[1.35, 0.5, 0]}
         fadeRange={ENGINE_STAGE_RANGE}
       />
-      {labels.map((text, i) => (
+      <EngineLabel position={INTRO_POSITION} text={intro} />
+      {points.map((text, i) => (
         <EngineLabel key={text} position={LABEL_POSITIONS[i]} text={text} />
       ))}
     </group>

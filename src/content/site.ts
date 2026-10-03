@@ -64,9 +64,17 @@ export const siteContent = {
     },
   ],
 
-  // Floating labels on the engine block during the "engine" stage. Generic
-  // part names only — not a claim about what's actually serviced.
-  engineLabels: ["Oil", "Filter", "Battery"] as string[],
+  // The engine-bay check points highlighted in turn during the "engine"
+  // stage. These are framed as the real checks the garage performs, not a
+  // fake readout — see EngineBay.tsx.
+  engineChecks: {
+    intro: "We check:",
+    points: ["Oil level", "Coolant", "Battery", "Brake fluid"] as string[],
+  },
+
+  // The real-world body colour of the car model, applied with clearcoat in
+  // CarModel.tsx. Change this one value to re-colour the car.
+  carColor: "#0b0b0d",
 
   // Decorative readout chips shown beside the car during the "diagnostics"
   // stage. These are fake/placeholder UI dressing, not real inspection
