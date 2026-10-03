@@ -3,6 +3,30 @@
 // `ACTIVE_THEME_NAME` below re-skins the entire site in one line — nothing
 // else should ever hard-code a colour.
 
+// Real-world material and lighting colours for the car, engine bay and
+// floating tools. Shared by every preset: they describe metal, rubber,
+// glass and workshop light, not the brand, so they don't change with it.
+const MATERIALS = {
+  engineMetal: "#3a3d43",
+  engineDark: "#16171a",
+  enginePlastic: "#1d1e21",
+  rubber: "#0e0e10",
+  reservoir: "#d9dcdf",
+  toolSteel: "#c4c9d0",
+  toolGrip: "#1c1e23",
+  sparkCeramic: "#eeeae2",
+  oilBottle: "#2b2d31",
+  tyreTint: "#5a5a5a",
+  glassTint: "#101318",
+  headlampGlass: "#e9edf2",
+  indicatorGlass: "#ff9d2e",
+  headlampGlow: "#f4f7ff",
+  tailLampGlow: "#ff1a1a",
+  rimLight: "#c9dcff",
+  workshopLight: "#ffc286",
+  contactShadow: "#000000",
+};
+
 const TEAL = {
   background: "#060912",
   primary: "#19e3d0",
@@ -16,6 +40,7 @@ const TEAL = {
   ambientGround: "#05060a",
   ambientSun: "#9db4d8",
   carSolid: "#05070d",
+  ...MATERIALS,
 };
 
 const AMBER_RED = {
@@ -31,6 +56,7 @@ const AMBER_RED = {
   ambientGround: "#0a0503",
   ambientSun: "#d99a66",
   carSolid: "#140a06",
+  ...MATERIALS,
 };
 
 const ICE_BLUE = {
@@ -46,6 +72,7 @@ const ICE_BLUE = {
   ambientGround: "#05080f",
   ambientSun: "#bfe6ff",
   carSolid: "#060a12",
+  ...MATERIALS,
 };
 
 export const THEME_PRESETS = {
