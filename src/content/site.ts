@@ -76,16 +76,6 @@ export const siteContent = {
   // CarModel.tsx. Change this one value to re-colour the car.
   carColor: "#0b0b0d",
 
-  // Decorative readout chips shown beside the car during the "diagnostics"
-  // stage. These are fake/placeholder UI dressing, not real inspection
-  // results — see the code comment in Diagnostics.tsx.
-  diagnosticsReadouts: [
-    "Brakes OK",
-    "Tyres OK",
-    "Fluids OK",
-    "Lights OK",
-  ] as string[],
-
   // The /book page's services list. Names are fixed (given directly, not
   // invented); descriptions are placeholders pending real copy.
   services: [

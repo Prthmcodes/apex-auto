@@ -39,7 +39,6 @@ const TEAL = {
   ambientSky: "#2b3a55",
   ambientGround: "#05060a",
   ambientSun: "#9db4d8",
-  carSolid: "#05070d",
   ...MATERIALS,
 };
 
@@ -55,7 +54,6 @@ const AMBER_RED = {
   ambientSky: "#4a2a1a",
   ambientGround: "#0a0503",
   ambientSun: "#d99a66",
-  carSolid: "#140a06",
   ...MATERIALS,
 };
 
@@ -71,7 +69,6 @@ const ICE_BLUE = {
   ambientSky: "#2d4a6b",
   ambientGround: "#05080f",
   ambientSun: "#bfe6ff",
-  carSolid: "#060a12",
   ...MATERIALS,
 };
 

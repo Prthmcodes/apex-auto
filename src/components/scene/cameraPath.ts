@@ -1,7 +1,6 @@
 import * as THREE from "three";
 
-// Points of interest in the scene, shared by the camera's look-at path and
-// the glowing marker dots on the car. Computed from the real car.glb's own
+// Points of interest on the car that the camera looks at. Computed from the real car.glb's own
 // geometry (see CarModel.tsx's auto-centring) — not guessed: the model is
 // centred on X/Z and rested on Y=0 at layout.car.position, nose toward +Z,
 // so a local-space point (lx, ly, lz) relative to the model's own bbox

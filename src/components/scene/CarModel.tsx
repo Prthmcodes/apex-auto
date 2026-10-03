@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -38,8 +38,12 @@ const SPINNING_NODES = [
   "Object_24", // rear, -Z
   "Object_26", // rear, +Z
 ];
-// The focus wheel's brake disc, which glows softly during "wheels".
-const FOCUS_DISC = "Object_34";
+// The focus wheel's hub centre and the plane of its outer face, in the
+// model's own space (measured from Object_4's geometry). The brake-disc
+// highlight ring sits here, just proud of the wheel.
+const FOCUS_HUB: [number, number, number] = [1.607, 0.428, -1.29];
+const discRingGeometry = new THREE.TorusGeometry(0.27, 0.0035, 8, 64);
+const discHaloGeometry = new THREE.RingGeometry(0.25, 0.29, 64);
 
 // The bonnet, in the model's own space (X is front to back, Y is up). The
 // paint turns see-through above BONNET_MIN_Y and forward of BONNET_REAR_X
@@ -216,22 +220,6 @@ function prepareCar(source: THREE.Object3D) {
     return node ? [{ node, rest: node.quaternion.clone() }] : [];
   });
 
-  // The focus disc gets its own plain material copy, so its glow doesn't
-  // light up every other part that shares the same metal.
-  let discMaterial: THREE.MeshStandardMaterial | null = null;
-  const disc = root.getObjectByName(FOCUS_DISC);
-  if (disc instanceof THREE.Mesh) {
-    discMaterial = new THREE.MeshStandardMaterial().copy(
-      disc.material as THREE.MeshStandardMaterial
-    );
-    discMaterial.onBeforeCompile = () => {};
-    discMaterial.transparent = false;
-    discMaterial.customProgramCacheKey = () => "brake-disc";
-    discMaterial.emissive.set(theme.primary);
-    discMaterial.emissiveIntensity = 0;
-    disc.material = discMaterial;
-  }
-
   // Centre on X/Z and rest the lowest point (the tyres) on Y=0, computed
   // from the model's own geometry, never hard-coded.
   const box = new THREE.Box3().setFromObject(root);
@@ -240,14 +228,14 @@ function prepareCar(source: THREE.Object3D) {
   const offset: [number, number, number] = [-centre.x, -box.min.y, -centre.z];
   const scale = layout.car.length / size.x;
 
-  return { root, uniforms, wheels, discMaterial, offset, scale };
+  return { root, uniforms, wheels, offset, scale };
 }
 
 type PreparedCar = ReturnType<typeof prepareCar>;
 
-/** Per-frame update: bonnet see-through, wheel spin and brake disc glow. */
+/** Per-frame update: bonnet see-through and wheel spin. */
 function updateCar(car: PreparedCar, progress: number, reduced: boolean) {
-  const { root, uniforms, wheels, discMaterial } = car;
+  const { root, uniforms, wheels } = car;
 
   uniforms.uSceneInverse.value.copy(root.matrixWorld).invert();
   uniforms.uXray.value = engineReveal(progress, reduced);
@@ -259,17 +247,12 @@ function updateCar(car: PreparedCar, progress: number, reduced: boolean) {
     // parent), not the node's own tilted axes.
     node.rotateOnWorldAxis(AXLE_AXIS, angle);
   }
-
-  if (discMaterial) {
-    discMaterial.emissiveIntensity =
-      0.9 * bandOpacity(progress, WHEELS_RANGE, reduced ? 0.001 : 0.04);
-  }
 }
 
 /**
  * The real car: loads car.glb, centres and grounds it, applies the realism
  * material pass (gloss black clearcoat paint, dark glass, rubber tyres),
- * spins the wheels with scroll, glows the brake disc during "wheels",
+ * spins the wheels with scroll, rings the front brake disc during "wheels",
  * and turns the bonnet see-through over the engine bay during "engine".
  */
 export default function CarModel() {
@@ -290,7 +273,56 @@ export default function CarModel() {
       <group position={car.offset}>
         <primitive object={car.root} />
         <EngineBay />
+        <BrakeDiscHighlight />
       </group>
+    </group>
+  );
+}
+
+/**
+ * A thin glowing ring and soft halo over the front wheel's brake disc
+ * during the "wheels" stage, like a configurator hotspot. Sits on top of
+ * the model rather than recolouring it: the disc, spokes and tyre are all
+ * one textured mesh in this model, so there's no separate disc to light.
+ */
+function BrakeDiscHighlight() {
+  const ringMaterial = useRef<THREE.MeshBasicMaterial>(null!);
+  const haloMaterial = useRef<THREE.MeshBasicMaterial>(null!);
+  const reducedMotion = useReducedMotion();
+
+  useFrame(() => {
+    const amount = bandOpacity(
+      scrollState.progress,
+      WHEELS_RANGE,
+      reducedMotion.current ? 0.001 : 0.04
+    );
+    ringMaterial.current.opacity = 0.55 * amount;
+    haloMaterial.current.opacity = 0.04 * amount;
+  });
+
+  return (
+    <group position={FOCUS_HUB} rotation={[Math.PI, 0, 0]}>
+      <mesh geometry={discHaloGeometry} renderOrder={2}>
+        <meshBasicMaterial
+          ref={haloMaterial}
+          color={theme.primary}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh geometry={discRingGeometry} renderOrder={2}>
+        <meshBasicMaterial
+          ref={ringMaterial}
+          color={theme.primary}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
     </group>
   );
 }
