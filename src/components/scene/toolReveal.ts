@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { layout } from "./layout";
+import { RISE_FIRST_START, RISE_LENGTH, RISE_STAGGER } from "./toolTiming";
 
 // Where the tool chest stands, and how the six tools come out of it.
 //
@@ -59,16 +60,9 @@ export function chestSlot(index: number): Vec3 {
   ];
 }
 
-// The six tools come out one after another as the camera comes into the
-// workshop — roughly the back half of "inspect" through to the start of
-// "engine", so they're all out and on their way by the time the engine
-// stage needs them beside the car.
-const RISE_FIRST_START = 0.21;
-const RISE_STAGGER = 0.022;
-const RISE_LENGTH = 0.1;
-
-/** The scroll point at which the first drawer starts to move. */
-export const RISE_START = RISE_FIRST_START;
+// The rise timing lives in toolTiming.ts, which has no three.js import, so
+// the HTML overlay can read it without pulling in the 3D bundle.
+export { RISE_START } from "./toolTiming";
 
 /**
  * 0 while tool `index` is still shut in its drawer, 1 once it's fully out

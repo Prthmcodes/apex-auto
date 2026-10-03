@@ -51,7 +51,13 @@ const STAGE_LOOK_ATS = [
   FRONT_WHEEL,
   BONNET,
   CAR_CENTER,
-  new THREE.Vector3(0, 1.9, -2),
+  // Turned right, towards the middle of the elevation (x = 2.4), rather
+  // than straight at the door. Aimed at x = 0, the closing shot cut the
+  // fascia off at the right on a phone — the business name ran behind the
+  // stage dots and the phone number fell out of frame. Only the gaze
+  // moves; the camera's position, and so its route back out through the
+  // door, is unchanged.
+  new THREE.Vector3(2.1, 1.9, -2),
 ];
 
 // Scroll progress (0 to 1) is passed straight into getPoint() on both

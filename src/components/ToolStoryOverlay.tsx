@@ -13,7 +13,13 @@ import {
   setHover,
   subscribe,
 } from "@/lib/toolStory";
-import { RISE_START } from "./scene/toolReveal";
+// From toolTiming, not toolReveal or carStages: both of those import
+// three.js, and this overlay loads before the WebGL check, so importing
+// them would download the 3D bundle even when the fallback page is shown.
+import { RISE_START } from "./scene/toolTiming";
+
+// When the tools shrink away: the end of the diagnostics stage.
+const TOOLS_GONE = siteContent.stages[4].range[1];
 
 const HINT_VISIBLE_MS = 5200;
 
@@ -40,10 +46,14 @@ export default function ToolStoryOverlay() {
       setHintVisible(false);
       return;
     }
-    // Only offer it once the tools are actually on screen to be tapped.
+    // Only offer it while the tools are actually on screen to be tapped.
+    // The upper bound matters: without it, landing at the bottom of the
+    // page (a reload while scrolled down, the End key) showed the hint on
+    // the closing shot, after the tools had gone, across the Call button.
     let timer: number | undefined;
     let frame = requestAnimationFrame(function check() {
-      if (scrollState.progress >= RISE_START + 0.05) {
+      const progress = scrollState.progress;
+      if (progress >= RISE_START + 0.05 && progress < TOOLS_GONE - 0.05) {
         setHintVisible(true);
         timer = window.setTimeout(() => {
           setHintVisible(false);

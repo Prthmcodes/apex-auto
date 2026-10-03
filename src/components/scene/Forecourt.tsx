@@ -61,15 +61,19 @@ function buildMaterials() {
       roughness: 0.86,
       metalness: 0,
     }),
-    // A puddle is a hole in the tarmac full of sky. Dark and nearly smooth,
-    // so it picks up the dusk environment map as a reflection; the blob
-    // mask gives it an edge instead of the perfect circle of a bare disc.
+    // A puddle is a hole in the tarmac full of sky. Nearly smooth, so it
+    // picks up the dusk environment map as a reflection; the blob mask
+    // gives it an edge instead of the perfect circle of a bare disc.
+    // Part see-through and not quite black: fully opaque near-black, the
+    // dusk reflection was too dim to show, and the one at the right edge of
+    // the opening shot read as a black hole cut in the frame.
     puddle: new THREE.MeshStandardMaterial({
-      color: "#0a0d13",
-      roughness: 0.09,
-      metalness: 0.25,
+      color: "#1a212c",
+      roughness: 0.12,
+      metalness: 0.2,
       alphaMap: blob,
       transparent: true,
+      opacity: 0.55,
       depthWrite: false,
     }),
     oil: new THREE.MeshStandardMaterial({

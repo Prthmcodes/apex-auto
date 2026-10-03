@@ -5,6 +5,7 @@ import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { theme } from "./theme";
 import { layout } from "./layout";
+import { exteriorTexture } from "./exteriorTextures";
 
 const { width, depth, height, frontZ, backZ, door } = layout.garage;
 const halfWidth = width / 2;
@@ -145,7 +146,11 @@ function makeFrostedPaneTexture() {
 /** A small frosted, warmly lit window in the right-hand pillar. */
 function LitWindow() {
   const x = door.width / 2 + pillarWidth / 2;
-  const z = frontZ + wallThickness / 2;
+  // Proud of the exterior cladding (GarageExterior.tsx, which stands 0.05
+  // off the wall face). Set flush with the wall, as it was, the cladding
+  // hid the window and only its glow halo leaked out over the blockwork,
+  // as a stray tan strip across the pier.
+  const z = layout.facade.z + 0.075;
 
   const paneTexture = useMemo(() => makeFrostedPaneTexture(), []);
   useEffect(() => () => paneTexture.dispose(), [paneTexture]);
@@ -193,13 +198,16 @@ function LitWindow() {
         <meshStandardMaterial color="#231d17" roughness={0.8} />
       </mesh>
 
-      {/* a faint halo on the brickwork, so the light looks like it spills */}
+      {/* a faint halo on the wall, so the light looks like it spills.
+          Uses the exterior's soft round light-pool gradient: a flat-colour
+          plane showed up as a hard tan rectangle on the dark cladding. */}
       <mesh position={[0, 0, 0.046]}>
-        <planeGeometry args={[1.5, 1.7]} />
+        <planeGeometry args={[1.7, 1.9]} />
         <meshBasicMaterial
+          map={exteriorTexture.lightPool()}
           color={theme.workshopLight}
           transparent
-          opacity={0.05}
+          opacity={0.14}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
           toneMapped={false}
