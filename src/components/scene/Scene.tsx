@@ -1,11 +1,11 @@
 "use client";
 
 import { ContactShadows, Environment } from "@react-three/drei";
-import Atmosphere from "./Atmosphere";
+import Atmosphere, { SkyDome } from "./Atmosphere";
 import Atmospherics from "./Atmospherics";
 import Ground from "./Ground";
 import Garage from "./Garage";
-import GarageExterior from "./GarageExterior";
+import GarageExterior, { DoorwayLightSpill } from "./GarageExterior";
 import Forecourt from "./Forecourt";
 import CarModel from "./CarModel";
 import FloatingTools from "./FloatingTools";
@@ -17,6 +17,8 @@ import { layout } from "./layout";
 import { theme } from "./theme";
 import { ENVIRONMENT_URL } from "./assets";
 import WorkshopLights from "./WorkshopLights";
+import StaticShadows from "./StaticShadows";
+import OutsideVisibility, { OUTSIDE_GROUP } from "./OutsideVisibility";
 
 export default function Scene({ onReady }: { onReady?: () => void }) {
   const [carX, , carZ] = layout.car.position;
@@ -31,14 +33,22 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
           stays the theme's dusk colour and fog. */}
       <Environment files={ENVIRONMENT_URL} environmentIntensity={0.4} />
       <WorkshopLights />
-      <Ground />
+      {/* Everything only ever seen from the street or through the open
+          door, hidden while it can't be (see OutsideVisibility.tsx). */}
+      <group name={OUTSIDE_GROUP}>
+        <SkyDome />
+        <Ground />
+        {/* The street-facing elevation and the ground in front of it. The
+            business name now lives on a lit fascia board here, which is
+            what replaced the glowing text that used to float over the
+            roofline (the old Sign component). */}
+        <GarageExterior />
+        <Forecourt />
+      </group>
       <Garage />
-      {/* The street-facing elevation and the ground in front of it. The
-          business name now lives on a lit fascia board here, which is
-          what replaced the glowing text that used to float over the
-          roofline (the old Sign component). */}
-      <GarageExterior />
-      <Forecourt />
+      {/* Not in the group above: it reaches inside the bay (see the
+          component). */}
+      <DoorwayLightSpill />
       <CarModel />
       <WorkshopProps />
       <ToolChest />
@@ -57,6 +67,9 @@ export default function Scene({ onReady }: { onReady?: () => void }) {
       />
       <Atmospherics />
       <CameraRig />
+      {/* After CameraRig, so they act on this frame's camera position. */}
+      <OutsideVisibility />
+      <StaticShadows />
       <SceneReady onReady={onReady} />
     </>
   );

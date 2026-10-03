@@ -155,7 +155,6 @@ function buildMaterials() {
       metalness: 0.3,
     }),
     poolCool: makeLightSprite(theme.floodLens, 0.42),
-    poolWarm: makeLightSprite(theme.workshopLight, 0.38),
   };
 }
 
@@ -404,14 +403,6 @@ function buildFloodlights(root: THREE.Object3D, m: Materials) {
       scale: [lamp.reach * 2.1, 1, lamp.reach * 2.1],
     });
   }
-
-  // Warm light flooding out of the open bay onto the apron. This is the
-  // one that sells "they're open" — a cold forecourt with a lit sign looks
-  // shut.
-  add(root, geometry.pool, m.poolWarm, {
-    position: [0, 0.025, FACE + 2.6],
-    scale: [door.width * 1.9, 1, 9.6],
-  });
 }
 
 function buildPersonnelDoor(root: THREE.Object3D, m: Materials, detailed: boolean) {
@@ -452,6 +443,32 @@ function buildPersonnelDoor(root: THREE.Object3D, m: Materials, detailed: boolea
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * Warm light flooding out of the open bay onto the apron. This is the one
+ * that sells "they're open" — a cold forecourt with a lit sign looks shut.
+ *
+ * Its own component, rendered by Scene.tsx OUTSIDE the group of street-side
+ * things that is hidden while the camera is in the bay: the pool is 9.6m
+ * deep and reaches a couple of metres in across the workshop floor, where
+ * the tall phone engine shot can see it without seeing the doorway.
+ */
+export function DoorwayLightSpill() {
+  const spill = useMemo(() => {
+    const mesh = new THREE.Mesh(
+      geometry.pool,
+      makeLightSprite(theme.workshopLight, 0.38)
+    );
+    mesh.position.set(0, 0.025, FACE + 2.6);
+    mesh.scale.set(door.width * 1.9, 1, 9.6);
+    mesh.updateMatrix();
+    mesh.matrixAutoUpdate = false;
+    mesh.raycast = () => {};
+    return mesh;
+  }, []);
+
+  return <primitive object={spill} />;
+}
 
 export default function GarageExterior() {
   const built = useMemo(() => {

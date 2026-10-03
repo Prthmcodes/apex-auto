@@ -372,7 +372,9 @@ function FloatingTool({ tool, index }: { tool: ToolSpec; index: number }) {
     const wanted = state.hoverId === tool.name || state.openId === tool.name ? 1 : 0;
     hover.current = reduced
       ? wanted
-      : THREE.MathUtils.damp(hover.current, wanted, 12, delta);
+      : // Capped like the camera's (CameraRig.tsx), so a slow frame
+        // doesn't snap the glow on or off.
+        THREE.MathUtils.damp(hover.current, wanted, 12, Math.min(delta, 1 / 30));
     const hovered = hover.current;
 
     group.scale.setScalar(tool.scale * eased * fit * (1 + hovered * 0.16));

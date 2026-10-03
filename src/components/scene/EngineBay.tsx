@@ -9,6 +9,7 @@ import scrollState from "@/lib/scrollState";
 import { useReducedMotion } from "@/lib/useReducedMotion";
 import { theme } from "./theme";
 import { engineReveal, labelReveal, checkHighlight } from "./carStages";
+import { setStyle } from "@/lib/setStyle";
 
 // Everything here is placed in the car model's own space (see CarModel.tsx):
 // X runs front (+) to back (-), Y is up from the ground, and the car's
@@ -195,12 +196,19 @@ function CheckPoint({
 
     if (labelRef.current) {
       const labelAmount = labelReveal(progress, reducedMotion.current);
-      labelRef.current.style.opacity = String(labelAmount * (0.55 + 0.45 * highlight));
-      labelRef.current.style.borderColor =
-        highlight > 0.5 ? theme.primary : "rgba(255,255,255,0.14)";
+      setStyle(labelRef.current, "opacity", String(labelAmount * (0.55 + 0.45 * highlight)));
+      // Fully hidden, not just transparent, outside the engine stage: an
+      // invisible label with a backdrop blur can still cost the browser a
+      // blur of the 3D view behind it on every frame.
+      setStyle(labelRef.current, "visibility", labelAmount > 0 ? "visible" : "hidden");
+      setStyle(
+        labelRef.current,
+        "borderColor",
+        highlight > 0.5 ? theme.primary : "rgba(255,255,255,0.14)"
+      );
     }
     if (dotRef.current) {
-      dotRef.current.style.opacity = String(0.35 + 0.65 * highlight);
+      setStyle(dotRef.current, "opacity", String(0.35 + 0.65 * highlight));
     }
   });
 
@@ -253,9 +261,9 @@ function IntroLabel({ text }: { text: string }) {
 
   useFrame(() => {
     if (ref.current) {
-      ref.current.style.opacity = String(
-        labelReveal(scrollState.progress, reducedMotion.current)
-      );
+      const amount = labelReveal(scrollState.progress, reducedMotion.current);
+      setStyle(ref.current, "opacity", String(amount));
+      setStyle(ref.current, "visibility", amount > 0 ? "visible" : "hidden");
     }
   });
 

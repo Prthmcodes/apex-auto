@@ -147,7 +147,11 @@ async function main() {
       // not a claim that real users see this snap — see the reduced-motion
       // section below for that check instead.
       if (!WITH_MOTION) await page.emulateMedia({ reducedMotion: "reduce" });
-      await page.goto(baseUrl, { waitUntil: "load" });
+      // ?fixedquality switches off adaptive quality (AdaptiveQuality.tsx).
+      // This machine has no graphics card and draws about one frame a
+      // second, so without it every shot would come out at the lowest
+      // quality step instead of showing what the page really looks like.
+      await page.goto(`${baseUrl}/?fixedquality`, { waitUntil: "load" });
 
       const hasWebGL = await page.evaluate(() => {
         try {

@@ -114,6 +114,8 @@ export function mergeByMaterial(root: THREE.Object3D, name: string) {
     // cast and receive normally.
     mesh.castShadow = false;
     mesh.receiveShadow = false;
+    // Never clickable, so never worth a pointer raycast.
+    mesh.raycast = () => {};
     merged.add(mesh);
   }
   return merged;

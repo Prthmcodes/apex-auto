@@ -69,79 +69,132 @@ type CarUniforms = {
   uSweepX: { value: number };
   uSweep: { value: number };
   uSweepColor: { value: THREE.Color };
+  uSweepLightPosition: { value: THREE.Vector3 };
+  uSweepLightColor: { value: THREE.Color };
 };
 
-// Where the diagnostics sweep's real light sits, in the model's own space:
+// Where the diagnostics sweep's light sits, in the model's own space:
 // level with the windows, out on the side the diagnostics camera views.
 const SWEEP_LIGHT_HEIGHT = 1.25;
 const SWEEP_LIGHT_SIDE_Z = -2.3;
+const SWEEP_LIGHT_INTENSITY = 5;
+// How far the sweep light reaches, in metres (the reach of the real point
+// light it replaces).
+const SWEEP_LIGHT_DISTANCE = 4;
 
 /**
- * Adds two effects to a material's built-in shader: the see-through bonnet
- * (engine stage) and a soft vertical band of light that travels along the
- * body (diagnostics stage).
+ * Adds the car's own effects to a material's built-in shader:
+ *
+ * - the diagnostics sweep light, on every car material. It used to be a
+ *   real three.js point light, but a real light is paid for on every lit
+ *   pixel of the whole scene (walls, floor, props) in every stage, even at
+ *   zero brightness — for something that only ever lights the car, and
+ *   only during "diagnostics". This evaluates the very same point-light
+ *   maths three.js uses (getDistanceAttenuation and RE_Direct), but only
+ *   here, and skips it entirely while the sweep is off.
+ * - for the x-ray materials only (`xray`): the see-through bonnet (engine
+ *   stage) and a soft vertical band of light that travels along the body
+ *   (diagnostics stage).
  */
-function addBonnetXray(material: THREE.MeshStandardMaterial, uniforms: CarUniforms) {
-  material.transparent = true;
+function addCarShader(
+  material: THREE.MeshStandardMaterial,
+  uniforms: CarUniforms,
+  xray: boolean
+) {
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
-    shader.vertexShader = shader.vertexShader
+    let fragment = shader.fragmentShader
       .replace(
         "#include <common>",
-        "uniform mat4 uSceneInverse;\nvarying vec3 vCarPos;\n#include <common>"
+        "uniform vec3 uSweepLightPosition;\nuniform vec3 uSweepLightColor;\n#include <common>"
       )
       .replace(
-        "#include <project_vertex>",
-        // The vertex's position in the car model's own space, whatever
-        // scaling/rotation each individual mesh node carries.
-        "#include <project_vertex>\nvCarPos = (uSceneInverse * modelMatrix * vec4(transformed, 1.0)).xyz;"
+        "#include <lights_fragment_begin>",
+        `#include <lights_fragment_begin>
+        if ( uSweepLightColor != vec3( 0.0 ) ) {
+          vec3 sweepVector = uSweepLightPosition - geometryPosition;
+          directLight.direction = normalize( sweepVector );
+          directLight.color = uSweepLightColor * getDistanceAttenuation( length( sweepVector ), ${SWEEP_LIGHT_DISTANCE.toFixed(1)}, 2.0 );
+          directLight.visible = true;
+          RE_Direct( directLight, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
+        }`
       );
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        "#include <common>",
-        "uniform float uXray;\nuniform vec3 uXrayColor;\nuniform float uSweepX;\nuniform float uSweep;\nuniform vec3 uSweepColor;\nvarying vec3 vCarPos;\n#include <common>"
-      )
-      .replace(
-        "#include <emissivemap_fragment>",
-        `#include <emissivemap_fragment>
-        // The diagnostics sweep: a soft vertical band of light at uSweepX.
-        float sweepOffset = (vCarPos.x - uSweepX) / 0.14;
-        totalEmissiveRadiance += uSweepColor * exp(-sweepOffset * sweepOffset) * uSweep * 0.16;`
-      )
-      .replace(
-        "#include <opaque_fragment>",
-        `
-        float bonnet = smoothstep(${BONNET_REAR_X.toFixed(3)}, ${(BONNET_REAR_X + 0.2).toFixed(3)}, vCarPos.x)
-          * smoothstep(${BONNET_MIN_Y.toFixed(3)}, ${(BONNET_MIN_Y + 0.08).toFixed(3)}, vCarPos.y);
-        float xray = bonnet * uXray;
-        // A faint accent tint along the edge of the see-through area, so it
-        // reads as a deliberate cut-away rather than a rendering glitch.
-        float rim = xray * (1.0 - xray) * 4.0;
-        outgoingLight += uXrayColor * rim * 0.06;
-        diffuseColor.a = mix(diffuseColor.a, 0.1, xray);
-        #include <opaque_fragment>
-        `
-      );
+
+    if (xray) {
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          "#include <common>",
+          "uniform mat4 uSceneInverse;\nvarying vec3 vCarPos;\n#include <common>"
+        )
+        .replace(
+          "#include <project_vertex>",
+          // The vertex's position in the car model's own space, whatever
+          // scaling/rotation each individual mesh node carries.
+          "#include <project_vertex>\nvCarPos = (uSceneInverse * modelMatrix * vec4(transformed, 1.0)).xyz;"
+        );
+      fragment = fragment
+        .replace(
+          "#include <common>",
+          "uniform float uXray;\nuniform vec3 uXrayColor;\nuniform float uSweepX;\nuniform float uSweep;\nuniform vec3 uSweepColor;\nvarying vec3 vCarPos;\n#include <common>"
+        )
+        .replace(
+          "#include <emissivemap_fragment>",
+          `#include <emissivemap_fragment>
+          // The diagnostics sweep: a soft vertical band of light at uSweepX.
+          float sweepOffset = (vCarPos.x - uSweepX) / 0.14;
+          totalEmissiveRadiance += uSweepColor * exp(-sweepOffset * sweepOffset) * uSweep * 0.16;`
+        )
+        .replace(
+          "#include <opaque_fragment>",
+          `
+          float bonnet = smoothstep(${BONNET_REAR_X.toFixed(3)}, ${(BONNET_REAR_X + 0.2).toFixed(3)}, vCarPos.x)
+            * smoothstep(${BONNET_MIN_Y.toFixed(3)}, ${(BONNET_MIN_Y + 0.08).toFixed(3)}, vCarPos.y);
+          float xray = bonnet * uXray;
+          // A faint accent tint along the edge of the see-through area, so it
+          // reads as a deliberate cut-away rather than a rendering glitch.
+          float rim = xray * (1.0 - xray) * 4.0;
+          outgoingLight += uXrayColor * rim * 0.06;
+          diffuseColor.a = mix(diffuseColor.a, 0.1, xray);
+          #include <opaque_fragment>
+          `
+        );
+    }
+    shader.fragmentShader = fragment;
   };
-  // Stops three.js reusing a cached copy of the plain shader for this one.
-  material.customProgramCacheKey = () => "car-xray-sweep";
+  // Stops three.js reusing a cached copy of the plain shader for these.
+  const key = xray ? "car-xray-sweep" : "car-sweep";
+  material.customProgramCacheKey = () => key;
 }
 
-/** Swaps one of the model's materials for a tuned, realistic copy. */
+/**
+ * Swaps one of the model's materials for a tuned, realistic copy.
+ * `transparent` only matters for the x-ray materials: true for the copy
+ * used on the bonnet's triangles, false for the rest of the car.
+ */
 function tuneMaterial(
   source: THREE.Material,
   uniforms: CarUniforms,
-  envMap: THREE.Texture
+  envMap: THREE.Texture,
+  transparent = false
 ): THREE.Material {
-  const material = tuneMaterialType(source, uniforms);
-  // The car gets its own reference to the HDR, so its reflections can be
-  // stronger than the scene-wide environment light (three.js ignores a
-  // material's envMapIntensity when it relies on the scene's environment).
-  if (material instanceof THREE.MeshStandardMaterial) material.envMap = envMap;
+  const material = tuneMaterialType(source);
+  if (material instanceof THREE.MeshStandardMaterial) {
+    // The car gets its own reference to the HDR, so its reflections can be
+    // stronger than the scene-wide environment light (three.js ignores a
+    // material's envMapIntensity when it relies on the scene's environment).
+    material.envMap = envMap;
+    const xray = XRAY_MATERIALS.includes(source.name);
+    // Only the bonnet's own triangles get a transparent copy (see
+    // splitOutBonnet). Everything else is drawn opaque: same shader, same
+    // look, but depth-sorted front to back with no blending, instead of the
+    // half-million-triangle car being sorted and blended every frame.
+    if (xray) material.transparent = transparent;
+    addCarShader(material, uniforms, xray);
+  }
   return material;
 }
 
-function tuneMaterialType(source: THREE.Material, uniforms: CarUniforms): THREE.Material {
+function tuneMaterialType(source: THREE.Material): THREE.Material {
   const name = source.name;
 
   if (GLASS_MATERIALS.includes(name)) {
@@ -188,7 +241,6 @@ function tuneMaterialType(source: THREE.Material, uniforms: CarUniforms): THREE.
         // gloss black starts reading as silver.
         envMapIntensity: 0.75,
       });
-      addBonnetXray(paint, uniforms);
       return paint;
     }
     case "Tyre":
@@ -220,9 +272,76 @@ function tuneMaterialType(source: THREE.Material, uniforms: CarUniforms): THREE.
       material.emissiveIntensity = 0.5;
       break;
   }
-  if (XRAY_MATERIALS.includes(name)) addBonnetXray(material, uniforms);
   return material;
 }
+
+/**
+ * Splits a mesh's triangles into the ones the bonnet x-ray can reach and
+ * the rest, so only the first group needs to be drawn transparent.
+ *
+ * The x-ray in the shader only ever affects points forward of
+ * BONNET_REAR_X and above BONNET_MIN_Y (in the car model's own space): its
+ * smoothsteps are exactly zero everywhere else. So a triangle whose
+ * bounding box doesn't reach into that corner can never turn see-through,
+ * and can be drawn opaque with no visible difference. Measured on bounding
+ * boxes rather than vertices so a triangle that merely straddles the
+ * corner still counts as bonnet.
+ *
+ * Returns two new geometries that SHARE the original's vertex data (only
+ * the triangle lists differ), so this costs no extra GPU memory for
+ * vertices. The cached model's own geometry is never modified.
+ */
+function splitOutBonnet(mesh: THREE.Mesh, toCarSpace: THREE.Matrix4) {
+  const geometry = mesh.geometry;
+  if (geometry.groups.length > 0) return null;
+  const position = geometry.attributes.position;
+  const index = geometry.index;
+  const triangleCount = (index ? index.count : position.count) / 3;
+
+  // Every vertex in car space, once.
+  const carX = new Float32Array(position.count);
+  const carY = new Float32Array(position.count);
+  const v = new THREE.Vector3();
+  for (let i = 0; i < position.count; i += 1) {
+    v.fromBufferAttribute(position, i).applyMatrix4(toCarSpace);
+    carX[i] = v.x;
+    carY[i] = v.y;
+  }
+
+  const bonnet: number[] = [];
+  const rest: number[] = [];
+  for (let t = 0; t < triangleCount; t += 1) {
+    const a = index ? index.getX(t * 3) : t * 3;
+    const b = index ? index.getX(t * 3 + 1) : t * 3 + 1;
+    const c = index ? index.getX(t * 3 + 2) : t * 3 + 2;
+    const maxX = Math.max(carX[a], carX[b], carX[c]);
+    const maxY = Math.max(carY[a], carY[b], carY[c]);
+    const target = maxX > BONNET_REAR_X && maxY > BONNET_MIN_Y ? bonnet : rest;
+    target.push(a, b, c);
+  }
+  if (bonnet.length === 0) return null;
+
+  const withIndex = (list: number[]) => {
+    const part = new THREE.BufferGeometry();
+    for (const [name, attribute] of Object.entries(geometry.attributes)) {
+      part.setAttribute(name, attribute);
+    }
+    part.setIndex(list);
+    part.computeBoundingBox();
+    part.computeBoundingSphere();
+    return part;
+  };
+  return {
+    bonnet: withIndex(bonnet),
+    rest: rest.length ? withIndex(rest) : null,
+  };
+}
+
+// Raycasting the car would mean testing half a million triangles, so its
+// meshes opt out of pointer picking entirely; only the tools are
+// clickable. (R3F only raycasts objects with pointer handlers today, so
+// this is a guard against a future handler higher up the tree.)
+const noRaycast: THREE.Object3D["raycast"] = () => {};
 
 /**
  * Hangs one wheel off a new pivot group placed exactly at the centre of
@@ -276,24 +395,63 @@ function prepareCar(source: THREE.Object3D, envMap: THREE.Texture) {
     uSweepX: { value: 0 },
     uSweep: { value: 0 },
     uSweepColor: { value: new THREE.Color(theme.primary) },
+    uSweepLightPosition: { value: new THREE.Vector3() },
+    uSweepLightColor: { value: new THREE.Color(0, 0, 0) },
   };
 
+  // Two tuned copies per x-ray material: opaque for most of the car,
+  // transparent for the bonnet's own triangles.
   const tuned = new Map<THREE.Material, THREE.Material>();
+  const tunedSeeThrough = new Map<THREE.Material, THREE.Material>();
+  const tunedFor = (original: THREE.Material, transparent: boolean) => {
+    const cache = transparent ? tunedSeeThrough : tuned;
+    let replacement = cache.get(original);
+    if (!replacement) {
+      replacement = tuneMaterial(original, uniforms, envMap, transparent);
+      cache.set(original, replacement);
+    }
+    return replacement;
+  };
+
+  root.updateWorldMatrix(true, true);
+  const toCarSpace = new THREE.Matrix4();
+  const rootInverse = root.matrixWorld.clone().invert();
+
+  const meshes: THREE.Mesh[] = [];
   root.traverse((child) => {
-    if (!(child instanceof THREE.Mesh)) return;
+    if (child instanceof THREE.Mesh) meshes.push(child);
+  });
+  for (const child of meshes) {
     child.castShadow = true;
     child.receiveShadow = true;
+    child.raycast = noRaycast;
     const original = child.material as THREE.Material;
-    let replacement = tuned.get(original);
-    if (!replacement) {
-      replacement = tuneMaterial(original, uniforms, envMap);
-      tuned.set(original, replacement);
-    }
-    child.material = replacement;
+    child.material = tunedFor(original, false);
     // Draw glass after the paint, so the see-through bonnet and the glass
     // never fight over which one is in front.
     if (GLASS_MATERIALS.includes(original.name)) child.renderOrder = 1;
-  });
+
+    if (!XRAY_MATERIALS.includes(original.name)) continue;
+    toCarSpace.multiplyMatrices(rootInverse, child.matrixWorld);
+    const parts = splitOutBonnet(child, toCarSpace);
+    if (!parts) continue;
+
+    // The bonnet's triangles: a sibling with exactly the same transform,
+    // drawn with the transparent copy of the material.
+    const bonnet = new THREE.Mesh(parts.bonnet, tunedFor(original, true));
+    bonnet.name = `${child.name} (bonnet)`;
+    bonnet.position.copy(child.position);
+    bonnet.quaternion.copy(child.quaternion);
+    bonnet.scale.copy(child.scale);
+    bonnet.castShadow = true;
+    bonnet.receiveShadow = true;
+    bonnet.renderOrder = child.renderOrder;
+    bonnet.raycast = noRaycast;
+    child.parent!.add(bonnet);
+
+    if (parts.rest) child.geometry = parts.rest;
+    else child.visible = false;
+  }
 
   const wheels = WHEEL_NODES.flatMap((name) => {
     const node = root.getObjectByName(name);
@@ -314,14 +472,28 @@ function prepareCar(source: THREE.Object3D, envMap: THREE.Texture) {
 
 type PreparedCar = ReturnType<typeof prepareCar>;
 
+const sweepLightColor = new THREE.Color(theme.rimLight);
+
 /** Per-frame update: bonnet see-through, light sweep and wheel spin. */
-function updateCar(car: PreparedCar, progress: number, reduced: boolean) {
+function updateCar(car: PreparedCar, progress: number, reduced: boolean, camera: THREE.Camera) {
   const { root, uniforms, wheels } = car;
 
   uniforms.uSceneInverse.value.copy(root.matrixWorld).invert();
   uniforms.uXray.value = engineReveal(progress, reduced);
   uniforms.uSweepX.value = sweepX(progress);
   uniforms.uSweep.value = sweepStrength(progress, reduced);
+
+  // The sweep light: placed in the car's own space, then taken to the
+  // camera's view space, which is the space three.js lights its pixels in.
+  // Zero colour switches it off in the shader.
+  const sweep = sweepStrength(progress, reduced);
+  uniforms.uSweepLightColor.value
+    .copy(sweepLightColor)
+    .multiplyScalar(SWEEP_LIGHT_INTENSITY * sweep);
+  uniforms.uSweepLightPosition.value
+    .set(sweepX(progress), SWEEP_LIGHT_HEIGHT, SWEEP_LIGHT_SIDE_Z)
+    .applyMatrix4(root.matrixWorld)
+    .applyMatrix4(camera.matrixWorldInverse);
 
   const angle = reduced ? 0 : -progress * WHEEL_SPIN_TURNS * Math.PI * 2;
   for (const pivot of wheels) {
@@ -346,8 +518,8 @@ export default function CarModel() {
   const car = useMemo(() => prepareCar(scene, envMap), [scene, envMap]);
   const reducedMotion = useReducedMotion();
 
-  useFrame(() => {
-    updateCar(car, scrollState.progress, reducedMotion.current);
+  useFrame(({ camera }) => {
+    updateCar(car, scrollState.progress, reducedMotion.current, camera);
   });
 
   return (
@@ -360,7 +532,6 @@ export default function CarModel() {
         <primitive object={car.root} />
         <EngineBay />
         <BrakeDiscHighlight />
-        <SweepLight />
       </group>
     </group>
   );
@@ -411,32 +582,5 @@ function BrakeDiscHighlight() {
         />
       </mesh>
     </group>
-  );
-}
-
-/**
- * The real light that travels with the diagnostics sweep, so the glossy
- * paint, glass and wheels catch a moving reflection as well as the glow.
- * Always present (at zero brightness when idle): adding or removing a
- * light mid-scroll would make three.js rebuild every shader.
- */
-function SweepLight() {
-  const lightRef = useRef<THREE.PointLight>(null!);
-  const reducedMotion = useReducedMotion();
-
-  useFrame(() => {
-    const progress = scrollState.progress;
-    lightRef.current.position.set(sweepX(progress), SWEEP_LIGHT_HEIGHT, SWEEP_LIGHT_SIDE_Z);
-    lightRef.current.intensity = 5 * sweepStrength(progress, reducedMotion.current);
-  });
-
-  return (
-    <pointLight
-      ref={lightRef}
-      color={theme.rimLight}
-      intensity={0}
-      distance={4}
-      decay={2}
-    />
   );
 }

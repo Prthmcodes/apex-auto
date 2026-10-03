@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useSyncExternalStore } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { theme } from "./theme";
 import { exteriorTexture } from "./exteriorTextures";
+import { getQualityShadows, subscribeQuality } from "@/lib/qualityState";
 
 /**
  * A dusk sky behind everything.
@@ -21,7 +23,7 @@ import { exteriorTexture } from "./exteriorTextures";
  * — fogging the sky would wash the whole gradient to a flat colour, which
  * is the thing it exists to avoid.
  */
-function SkyDome() {
+export function SkyDome() {
   const sky = useMemo(() => {
     const material = new THREE.MeshBasicMaterial({
       map: exteriorTexture.sky(),
@@ -40,12 +42,26 @@ function SkyDome() {
   return <primitive object={sky} />;
 }
 
+/**
+ * The scene-wide mood: background, fog, ambient light and the one key
+ * light. The sky dome is NOT rendered here; Scene.tsx groups it with the
+ * other things that are only ever seen through the open door from inside.
+ */
 export default function Atmosphere() {
+  // Adaptive quality's last step turns shadows off (see qualityState.ts).
+  const shadows = useSyncExternalStore(subscribeQuality, getQualityShadows, getQualityShadows);
+  const shadowsWereOn = useRef(shadows);
+  useFrame(({ gl }) => {
+    // The shadow map is only drawn on request (StaticShadows.tsx), so ask
+    // for a fresh one whenever shadows come back on.
+    if (shadows && !shadowsWereOn.current) gl.shadowMap.needsUpdate = true;
+    shadowsWereOn.current = shadows;
+  });
+
   return (
     <>
       <color attach="background" args={[theme.background]} />
       <fog attach="fog" args={[theme.fog.color, theme.fog.near, theme.fog.far]} />
-      <SkyDome />
       <hemisphereLight args={[theme.ambientSky, theme.ambientGround, 0.5]} />
       {/* The one soft key light, low and warm-cool for dusk — casts the
           scene's only real-time shadows (skipped renderer-wide on
@@ -54,7 +70,7 @@ export default function Atmosphere() {
         position={[-14, 10, 12]}
         intensity={0.45}
         color={theme.ambientSun}
-        castShadow
+        castShadow={shadows}
         shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-16}
         shadow-camera-right={16}

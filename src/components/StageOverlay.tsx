@@ -6,6 +6,7 @@ import { useReducedMotion } from "@/lib/useReducedMotion";
 import { theme } from "./scene/theme";
 import { siteContent } from "@/content/site";
 import { sequentialOpacity } from "./scene/stageFade";
+import { setStyle } from "@/lib/setStyle";
 
 function activeStageIndex(progress: number) {
   const stages = siteContent.stages;
@@ -29,22 +30,22 @@ export default function StageOverlay() {
       siteContent.stages.forEach((stage, i) => {
         const caption = captionRefs.current[i];
         if (caption) {
-          caption.style.opacity = String(
-            sequentialOpacity(progress, stage.range, reducedMotion.current)
+          setStyle(
+            caption,
+            "opacity",
+            String(sequentialOpacity(progress, stage.range, reducedMotion.current))
           );
         }
 
         const dot = dotRefs.current[i];
         if (dot) {
           const isActive = i === active;
-          dot.style.backgroundColor = isActive
-            ? theme.primary
-            : "rgba(255, 255, 255, 0.3)";
-          dot.style.boxShadow = isActive
-            ? `0 0 10px 2px ${theme.primary}99`
-            : "none";
-          dot.style.color = isActive ? theme.background : "rgba(255,255,255,0.7)";
-          dot.style.transform = isActive ? "scale(1.15)" : "scale(1)";
+          // Written only when they change (see setStyle): these five
+          // change once per stage, not once per frame.
+          setStyle(dot, "backgroundColor", isActive ? theme.primary : "rgba(255, 255, 255, 0.3)");
+          setStyle(dot, "boxShadow", isActive ? `0 0 10px 2px ${theme.primary}99` : "none");
+          setStyle(dot, "color", isActive ? theme.background : "rgba(255,255,255,0.7)");
+          setStyle(dot, "transform", isActive ? "scale(1.15)" : "scale(1)");
         }
       });
 

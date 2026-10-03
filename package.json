@@ -10,6 +10,7 @@
     "qa:screenshots": "node scripts/qa-screenshots.mjs",
     "qa:fallback": "node scripts/qa-fallback-check.mjs",
     "qa:lowpower": "node scripts/qa-lowpower-check.mjs",
+    "qa:perf": "node scripts/qa-perf.mjs",
     "assets:car": "node scripts/optimise-car.mjs"
   },
   "dependencies": {

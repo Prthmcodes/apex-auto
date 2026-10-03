@@ -7,6 +7,7 @@ import { useReducedMotion } from "@/lib/useReducedMotion";
 import { theme } from "./scene/theme";
 import { siteContent } from "@/content/site";
 import { fadeOpacity } from "./scene/stageFade";
+import { setStyle } from "@/lib/setStyle";
 
 const TOP_BAR_VISIBLE_FROM = siteContent.stages[1].range[0]; // "inspect" stage start
 const FINAL_CTA_RANGE = siteContent.stages[5].range; // "done" stage
@@ -31,22 +32,26 @@ export default function ConversionOverlay() {
       const progress = scrollState.progress;
 
       if (topBarRef.current) {
-        topBarRef.current.style.opacity = String(
-          fadeOpacity(progress, [TOP_BAR_VISIBLE_FROM, 1], reducedMotion.current, 0.03)
+        setStyle(
+          topBarRef.current,
+          "opacity",
+          String(fadeOpacity(progress, [TOP_BAR_VISIBLE_FROM, 1], reducedMotion.current, 0.03))
         );
       }
 
       if (finalCtaRef.current) {
-        finalCtaRef.current.style.opacity = String(
-          fadeOpacity(progress, FINAL_CTA_RANGE, reducedMotion.current)
+        setStyle(
+          finalCtaRef.current,
+          "opacity",
+          String(fadeOpacity(progress, FINAL_CTA_RANGE, reducedMotion.current))
         );
       }
 
       if (creditRef.current) {
         const opacity = fadeOpacity(progress, FINAL_CTA_RANGE, reducedMotion.current);
-        creditRef.current.style.opacity = String(opacity * 0.7);
+        setStyle(creditRef.current, "opacity", String(opacity * 0.7));
         // Only clickable while it's actually visible.
-        creditRef.current.style.pointerEvents = opacity > 0.5 ? "auto" : "none";
+        setStyle(creditRef.current, "pointerEvents", opacity > 0.5 ? "auto" : "none");
       }
 
       frame = requestAnimationFrame(tick);

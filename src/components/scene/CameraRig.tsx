@@ -13,6 +13,13 @@ import { layout } from "./layout";
 // Higher = snappier, lower = floatier. See THREE.MathUtils.damp.
 const DAMP_LAMBDA = 6;
 
+// The longest frame the easing will account for, in seconds (1/30). After
+// a slow frame (a hitch while something loads, a busy moment in the
+// browser) the raw time step can be a tenth of a second or more, and
+// easing by that much in one go makes the camera visibly jump towards its
+// target. Capped, it simply catches up over the next few frames instead.
+const MAX_DELTA = 1 / 30;
+
 // Every stage's camera position/look-at was framed assuming roughly this
 // much HORIZONTAL field of view. `fov` on a PerspectiveCamera is vertical,
 // so on a narrow/portrait viewport (aspect < 1) the horizontal FOV is much
@@ -96,7 +103,8 @@ export default function CameraRig() {
   // nothing from it.
   const elapsed = useRef(0);
 
-  useFrame(({ camera }, delta) => {
+  useFrame(({ camera }, rawDelta) => {
+    const delta = Math.min(rawDelta, MAX_DELTA);
     applyResponsiveFov(camera);
 
     const progress = THREE.MathUtils.clamp(scrollState.progress, 0, 1);
