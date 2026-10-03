@@ -22,6 +22,12 @@ export default function LoadingScreen({
   return (
     <div
       aria-hidden={ready}
+      // An explicit, unambiguous signal for the QA screenshot script.
+      // It used to detect "scene ready" by looking for any element with
+      // aria-hidden="true", which quietly broke the moment another
+      // overlay started rendering one of its own: the wait returned
+      // immediately and every first screenshot caught the loading screen.
+      data-scene-ready={ready ? "true" : "false"}
       className={`pointer-events-none fixed inset-0 z-50 flex flex-col items-center justify-center transition-opacity duration-700 ${
         ready ? "opacity-0" : "opacity-100"
       }`}

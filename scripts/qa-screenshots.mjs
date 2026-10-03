@@ -140,7 +140,7 @@ async function main() {
       // the scene — every "arrive" shot came back blank.
       await page
         .waitForFunction(
-          () => document.querySelector('[aria-hidden="true"]') !== null,
+          () => document.querySelector('[data-scene-ready="true"]') !== null,
           { timeout: 90000 }
         )
         .catch(() => {
